@@ -1,0 +1,388 @@
+2025-04-12 17:01:42,178 - main - INFO - Fetching data for SOL-USD from coinbase
+2025-04-12 17:01:42,180 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 17:01:43,191 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for SOL-USD
+2025-04-12 17:01:43,258 - src.utils.helpers - INFO - Saved DataFrame to data/SOL-USD_1h_20250412_170143.csv
+2025-04-12 17:01:43,259 - main - INFO - Performing technical analysis
+2025-04-12 17:01:43,259 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:01:43,273 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:01:44,030 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:01:44,417 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:01:44,422 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:01:44,424 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:01:44,442 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:01:44,921 - src.utils.helpers - INFO - Saved DataFrame to results/SOL-USD_1h_analysis_20250412_170144.csv
+2025-04-12 17:01:44,922 - main - INFO - Saved analysis results to results/SOL-USD_1h_analysis_20250412_170144.csv
+2025-04-12 17:01:44,922 - main - INFO - Training random_forest model
+2025-04-12 17:01:44,922 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:01:44,936 - src.models.prediction_model - INFO - Prepared features with 52 columns and 8755 samples
+2025-04-12 17:01:44,951 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 17:01:54,621 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 17:01:54,622 - src.models.prediction_model - INFO - Accuracy: 0.7898
+2025-04-12 17:01:54,622 - src.models.prediction_model - INFO - Precision: 0.7910
+2025-04-12 17:01:54,622 - src.models.prediction_model - INFO - Recall: 0.7928
+2025-04-12 17:01:54,622 - src.models.prediction_model - INFO - F1 Score: 0.7919
+2025-04-12 17:01:54,628 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.79      0.79      0.79       868
+           1       0.79      0.79      0.79       883
+
+    accuracy                           0.79      1751
+   macro avg       0.79      0.79      0.79      1751
+weighted avg       0.79      0.79      0.79      1751
+
+2025-04-12 17:01:54,635 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 17:01:54,635 - src.models.prediction_model - INFO - ics_26: 0.0573
+2025-04-12 17:01:54,635 - src.models.prediction_model - INFO - obv: 0.0324
+2025-04-12 17:01:54,635 - src.models.prediction_model - INFO - sma_200: 0.0298
+2025-04-12 17:01:54,636 - src.models.prediction_model - INFO - cmf: 0.0293
+2025-04-12 17:01:54,636 - src.models.prediction_model - INFO - adx_14: 0.0287
+2025-04-12 17:01:54,636 - src.models.prediction_model - INFO - atr_14: 0.0282
+2025-04-12 17:01:54,636 - src.models.prediction_model - INFO - volatility_ratio: 0.0272
+2025-04-12 17:01:54,636 - src.models.prediction_model - INFO - macds_12_26_9: 0.0267
+2025-04-12 17:01:54,637 - src.models.prediction_model - INFO - dmn_14: 0.0266
+2025-04-12 17:01:54,637 - src.models.prediction_model - INFO - dmp_14: 0.0258
+2025-04-12 17:01:54,666 - src.models.prediction_model - INFO - Model saved to models\SOL-USD_random_forest_20250412_170154.joblib
+2025-04-12 17:01:54,667 - main - INFO - Model saved to models\SOL-USD_random_forest_20250412_170154.joblib
+2025-04-12 17:02:09,689 - main - INFO - Fetching data for SOL-USD from coinbase
+2025-04-12 17:02:09,691 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 17:02:09,993 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for SOL-USD
+2025-04-12 17:02:10,058 - src.utils.helpers - INFO - Saved DataFrame to data/SOL-USD_1h_20250412_170209.csv
+2025-04-12 17:02:10,059 - main - INFO - Performing technical analysis
+2025-04-12 17:02:10,059 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:02:10,072 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:02:10,803 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:02:11,176 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:02:11,180 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:02:11,182 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:02:11,198 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:02:11,647 - src.utils.helpers - INFO - Saved DataFrame to results/SOL-USD_1h_analysis_20250412_170211.csv
+2025-04-12 17:02:11,648 - main - INFO - Saved analysis results to results/SOL-USD_1h_analysis_20250412_170211.csv
+2025-04-12 17:02:11,648 - main - INFO - Making predictions
+2025-04-12 17:02:11,648 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:02:11,692 - src.models.prediction_model - INFO - Model loaded from models\SOL-USD_random_forest_20250412_170154.joblib
+2025-04-12 17:02:11,857 - src.models.prediction_model - INFO - Made predictions for 8760 samples
+2025-04-12 17:02:12,303 - src.utils.helpers - INFO - Saved DataFrame to results/SOL-USD_1h_predictions_20250412_170211.csv
+2025-04-12 17:02:12,306 - main - INFO - Backtesting predictions
+2025-04-12 17:02:12,306 - src.utils.helpers - ERROR - Missing columns: prediction or target
+2025-04-12 17:02:12,315 - src.utils.helpers - INFO - Calculated trading metrics: Win Rate=0.6394, Strategy Return=nan
+2025-04-12 17:02:12,316 - main - INFO - Trading metrics: {'total_trades': 1651.0, 'winning_trades': 2830, 'losing_trades': 1596, 'win_rate': 0.6394035246272028, 'strategy_return': nan, 'buy_hold_return': nan, 'annualized_strategy_return': nan, 'annualized_buy_hold_return': nan, 'strategy_max_drawdown': -0.07940952740258012, 'buy_hold_max_drawdown': -0.6632349056894868, 'strategy_sharpe': 3.453083961435321, 'buy_hold_sharpe': 0.05474712557958776}
+2025-04-12 17:02:12,318 - main - INFO - Generating visualizations
+2025-04-12 17:02:12,318 - src.visualization.chart_generator - INFO - Initialized ChartGenerator with light theme
+2025-04-12 17:02:18,154 - src.visualization.chart_generator - INFO - Created interactive chart
+2025-04-12 17:02:18,911 - main - INFO - Saved interactive chart to charts/SOL-USD_1h_interactive_20250412_170218.html
+2025-04-12 17:03:41,697 - main - INFO - Fetching data for SOL-USD from coinbase
+2025-04-12 17:03:41,699 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 17:03:42,247 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for SOL-USD
+2025-04-12 17:03:42,313 - src.utils.helpers - INFO - Saved DataFrame to data/SOL-USD_1h_20250412_170342.csv
+2025-04-12 17:03:42,313 - main - INFO - Performing technical analysis
+2025-04-12 17:03:42,314 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:03:42,327 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:03:43,076 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:03:43,450 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:03:43,455 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:03:43,456 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:03:43,472 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:03:43,926 - src.utils.helpers - INFO - Saved DataFrame to results/SOL-USD_1h_analysis_20250412_170343.csv
+2025-04-12 17:03:43,926 - main - INFO - Saved analysis results to results/SOL-USD_1h_analysis_20250412_170343.csv
+2025-04-12 17:03:43,927 - main - INFO - Training random_forest model
+2025-04-12 17:03:43,927 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:03:43,941 - src.models.prediction_model - INFO - Prepared features with 52 columns and 8755 samples
+2025-04-12 17:03:43,956 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 17:03:53,581 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 17:03:53,581 - src.models.prediction_model - INFO - Accuracy: 0.7898
+2025-04-12 17:03:53,581 - src.models.prediction_model - INFO - Precision: 0.7910
+2025-04-12 17:03:53,582 - src.models.prediction_model - INFO - Recall: 0.7928
+2025-04-12 17:03:53,582 - src.models.prediction_model - INFO - F1 Score: 0.7919
+2025-04-12 17:03:53,588 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.79      0.79      0.79       868
+           1       0.79      0.79      0.79       883
+
+    accuracy                           0.79      1751
+   macro avg       0.79      0.79      0.79      1751
+weighted avg       0.79      0.79      0.79      1751
+
+2025-04-12 17:03:53,596 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 17:03:53,597 - src.models.prediction_model - INFO - ics_26: 0.0573
+2025-04-12 17:03:53,597 - src.models.prediction_model - INFO - obv: 0.0324
+2025-04-12 17:03:53,601 - src.models.prediction_model - INFO - sma_200: 0.0298
+2025-04-12 17:03:53,601 - src.models.prediction_model - INFO - cmf: 0.0293
+2025-04-12 17:03:53,601 - src.models.prediction_model - INFO - adx_14: 0.0287
+2025-04-12 17:03:53,602 - src.models.prediction_model - INFO - atr_14: 0.0282
+2025-04-12 17:03:53,602 - src.models.prediction_model - INFO - volatility_ratio: 0.0272
+2025-04-12 17:03:53,602 - src.models.prediction_model - INFO - macds_12_26_9: 0.0267
+2025-04-12 17:03:53,608 - src.models.prediction_model - INFO - dmn_14: 0.0266
+2025-04-12 17:03:53,608 - src.models.prediction_model - INFO - dmp_14: 0.0258
+2025-04-12 17:03:53,648 - src.models.prediction_model - INFO - Model saved to models\SOL-USD_random_forest_20250412_170353.joblib
+2025-04-12 17:03:53,648 - main - INFO - Model saved to models\SOL-USD_random_forest_20250412_170353.joblib
+2025-04-12 17:04:04,146 - main - INFO - Fetching data for SOL-USD from coinbase
+2025-04-12 17:04:04,147 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 17:04:04,397 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for SOL-USD
+2025-04-12 17:04:04,463 - src.utils.helpers - INFO - Saved DataFrame to data/SOL-USD_1h_20250412_170404.csv
+2025-04-12 17:04:04,464 - main - INFO - Performing technical analysis
+2025-04-12 17:04:04,464 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:04:04,477 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:04:05,203 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:04:05,579 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:04:05,583 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:04:05,585 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:04:05,600 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:04:06,047 - src.utils.helpers - INFO - Saved DataFrame to results/SOL-USD_1h_analysis_20250412_170405.csv
+2025-04-12 17:04:06,047 - main - INFO - Saved analysis results to results/SOL-USD_1h_analysis_20250412_170405.csv
+2025-04-12 17:04:06,047 - main - INFO - Training random_forest model
+2025-04-12 17:04:06,047 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:04:06,062 - src.models.prediction_model - INFO - Prepared features with 52 columns and 8755 samples
+2025-04-12 17:04:06,077 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 17:04:15,726 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 17:04:15,726 - src.models.prediction_model - INFO - Accuracy: 0.7898
+2025-04-12 17:04:15,726 - src.models.prediction_model - INFO - Precision: 0.7910
+2025-04-12 17:04:15,726 - src.models.prediction_model - INFO - Recall: 0.7928
+2025-04-12 17:04:15,727 - src.models.prediction_model - INFO - F1 Score: 0.7919
+2025-04-12 17:04:15,732 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.79      0.79      0.79       868
+           1       0.79      0.79      0.79       883
+
+    accuracy                           0.79      1751
+   macro avg       0.79      0.79      0.79      1751
+weighted avg       0.79      0.79      0.79      1751
+
+2025-04-12 17:04:15,738 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 17:04:15,740 - src.models.prediction_model - INFO - ics_26: 0.0573
+2025-04-12 17:04:15,740 - src.models.prediction_model - INFO - obv: 0.0324
+2025-04-12 17:04:15,740 - src.models.prediction_model - INFO - sma_200: 0.0298
+2025-04-12 17:04:15,740 - src.models.prediction_model - INFO - cmf: 0.0293
+2025-04-12 17:04:15,740 - src.models.prediction_model - INFO - adx_14: 0.0287
+2025-04-12 17:04:15,741 - src.models.prediction_model - INFO - atr_14: 0.0282
+2025-04-12 17:04:15,741 - src.models.prediction_model - INFO - volatility_ratio: 0.0272
+2025-04-12 17:04:15,741 - src.models.prediction_model - INFO - macds_12_26_9: 0.0267
+2025-04-12 17:04:15,741 - src.models.prediction_model - INFO - dmn_14: 0.0266
+2025-04-12 17:04:15,741 - src.models.prediction_model - INFO - dmp_14: 0.0258
+2025-04-12 17:04:15,771 - src.models.prediction_model - INFO - Model saved to models\SOL-USD_random_forest_20250412_170415.joblib
+2025-04-12 17:04:15,771 - main - INFO - Model saved to models\SOL-USD_random_forest_20250412_170415.joblib
+2025-04-12 17:04:15,773 - main - INFO - Making predictions
+2025-04-12 17:04:15,773 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:04:15,818 - src.models.prediction_model - INFO - Model loaded from models\SOL-USD_random_forest_20250412_170415.joblib
+2025-04-12 17:04:15,976 - src.models.prediction_model - INFO - Made predictions for 8760 samples
+2025-04-12 17:04:16,431 - src.utils.helpers - INFO - Saved DataFrame to results/SOL-USD_1h_predictions_20250412_170415.csv
+2025-04-12 17:04:16,444 - main - INFO - Backtesting predictions
+2025-04-12 17:04:16,445 - src.utils.helpers - INFO - Calculated performance metrics: Accuracy=0.9576, F1=0.9581
+2025-04-12 17:04:16,446 - main - INFO - Performance metrics: {'accuracy': 0.957648401826484, 'precision': 0.9575237234523272, 'recall': 0.9586066500791676, 'f1_score': 0.9580648807505369, 'true_positives': 4238, 'false_positives': 188, 'true_negatives': 4151, 'false_negatives': 183}
+2025-04-12 17:04:16,458 - src.utils.helpers - INFO - Calculated trading metrics: Win Rate=0.6394, Strategy Return=nan
+2025-04-12 17:04:16,458 - main - INFO - Trading metrics: {'total_trades': 1651.0, 'winning_trades': 2830, 'losing_trades': 1596, 'win_rate': 0.6394035246272028, 'strategy_return': nan, 'buy_hold_return': nan, 'annualized_strategy_return': nan, 'annualized_buy_hold_return': nan, 'strategy_max_drawdown': -0.07940952740258012, 'buy_hold_max_drawdown': -0.6632349056894868, 'strategy_sharpe': 3.453083961435321, 'buy_hold_sharpe': 0.054734260902183404}
+2025-04-12 17:04:16,460 - src.utils.helpers - ERROR - Error saving configuration to results/SOL-USD_1h_backtest_20250412_170416.json: Object of type int64 is not JSON serializable
+2025-04-12 17:04:16,463 - main - INFO - Generating visualizations
+2025-04-12 17:04:16,463 - src.visualization.chart_generator - INFO - Initialized ChartGenerator with light theme
+2025-04-12 17:04:17,203 - src.visualization.chart_generator - INFO - Created interactive chart
+2025-04-12 17:04:17,714 - main - INFO - Saved interactive chart to charts/SOL-USD_1h_interactive_20250412_170417.html
+2025-04-12 17:04:36,850 - main - INFO - Fetching data for SOL-USD from coinbase
+2025-04-12 17:04:36,852 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 17:04:37,152 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for SOL-USD
+2025-04-12 17:04:37,217 - src.utils.helpers - INFO - Saved DataFrame to data/SOL-USD_1h_20250412_170437.csv
+2025-04-12 17:04:45,393 - main - INFO - Fetching data for SOL-USD from coinbase
+2025-04-12 17:04:45,395 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 17:04:45,571 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for SOL-USD
+2025-04-12 17:04:45,638 - src.utils.helpers - INFO - Saved DataFrame to data/SOL-USD_1h_20250412_170445.csv
+2025-04-12 17:04:45,638 - main - INFO - Performing technical analysis
+2025-04-12 17:04:45,638 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:04:45,651 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:04:46,382 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:04:46,760 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:04:46,764 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:04:46,766 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:04:46,781 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:04:47,229 - src.utils.helpers - INFO - Saved DataFrame to results/SOL-USD_1h_analysis_20250412_170446.csv
+2025-04-12 17:04:47,229 - main - INFO - Saved analysis results to results/SOL-USD_1h_analysis_20250412_170446.csv
+2025-04-12 17:04:47,229 - main - INFO - Making predictions
+2025-04-12 17:04:47,229 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:04:47,264 - src.models.prediction_model - INFO - Model loaded from models\SOL-USD_random_forest_20250412_170415.joblib
+2025-04-12 17:04:47,423 - src.models.prediction_model - INFO - Made predictions for 8760 samples
+2025-04-12 17:04:47,867 - src.utils.helpers - INFO - Saved DataFrame to results/SOL-USD_1h_predictions_20250412_170447.csv
+2025-04-12 17:04:47,872 - main - INFO - Generating visualizations
+2025-04-12 17:04:47,872 - src.visualization.chart_generator - INFO - Initialized ChartGenerator with light theme
+2025-04-12 17:04:48,629 - src.visualization.chart_generator - INFO - Created interactive chart
+2025-04-12 17:04:49,144 - main - INFO - Saved interactive chart to charts/SOL-USD_1h_interactive_20250412_170448.html
+2025-04-12 17:06:18,049 - main - INFO - Fetching data for Fartcoin-USD from coinbase
+2025-04-12 17:06:18,051 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 17:06:20,915 - yfinance - ERROR - 
+1 Failed download:
+2025-04-12 17:06:20,915 - yfinance - ERROR - ['FARTCOIN-USD']: YFPricesMissingError('possibly delisted; no price data found  (period=1y) (Yahoo error = "15m data not available for startTime=1729641600 and endTime=1744491983. The requested range must be within the last 60 days.")')
+2025-04-12 17:06:20,917 - src.data.data_fetcher - INFO - Successfully fetched 0 rows from yfinance for Fartcoin-USD
+2025-04-12 17:06:20,917 - main - ERROR - Failed to fetch data for Fartcoin-USD
+2025-04-12 17:06:45,897 - main - INFO - Fetching data for FARTCOIN/USDT from coinbase
+2025-04-12 17:06:45,899 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 17:06:46,700 - src.data.data_fetcher - ERROR - Error fetching OHLCV data for FARTCOIN/USDT: coinbase requires "apiKey" credential
+2025-04-12 17:06:46,700 - main - ERROR - Failed to fetch data for FARTCOIN/USDT
+2025-04-12 17:07:04,553 - main - INFO - Fetching data for FARTCOIN/USDT from kucoin
+2025-04-12 17:07:04,555 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 17:07:06,106 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for FARTCOIN/USDT
+2025-04-12 17:07:06,110 - src.utils.helpers - INFO - Saved DataFrame to data/FARTCOIN_USDT_15m_20250412_170706.csv
+2025-04-12 17:07:15,673 - main - INFO - Fetching data for FARTCOIN/USDT from kucoin
+2025-04-12 17:07:15,676 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 17:07:16,976 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for FARTCOIN/USDT
+2025-04-12 17:07:16,979 - src.utils.helpers - INFO - Saved DataFrame to data/FARTCOIN_USDT_15m_20250412_170716.csv
+2025-04-12 17:07:16,983 - main - INFO - Performing technical analysis
+2025-04-12 17:07:16,983 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:07:16,993 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:07:17,054 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:07:17,090 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:07:17,092 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:07:17,093 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:07:17,103 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:07:17,129 - src.utils.helpers - INFO - Saved DataFrame to results/FARTCOIN_USDT_15m_analysis_20250412_170717.csv
+2025-04-12 17:07:17,129 - main - INFO - Saved analysis results to results/FARTCOIN_USDT_15m_analysis_20250412_170717.csv
+2025-04-12 17:07:17,144 - main - INFO - Generating visualizations
+2025-04-12 17:07:17,144 - src.visualization.chart_generator - INFO - Initialized ChartGenerator with light theme
+2025-04-12 17:07:17,531 - main - INFO - Saved chart to charts/FARTCOIN_USDT_15m_20250412_170717.png
+2025-04-12 17:07:45,289 - main - INFO - Fetching data for FARTCOIN/USDT from kucoin
+2025-04-12 17:07:45,291 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 17:07:46,652 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for FARTCOIN/USDT
+2025-04-12 17:07:46,655 - src.utils.helpers - INFO - Saved DataFrame to data/FARTCOIN_USDT_15m_20250412_170746.csv
+2025-04-12 17:07:46,659 - main - INFO - Performing technical analysis
+2025-04-12 17:07:46,660 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:07:46,669 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:07:46,729 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:07:46,764 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:07:46,767 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:07:46,768 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:07:46,778 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:07:46,803 - src.utils.helpers - INFO - Saved DataFrame to results/FARTCOIN_USDT_15m_analysis_20250412_170746.csv
+2025-04-12 17:07:46,803 - main - INFO - Saved analysis results to results/FARTCOIN_USDT_15m_analysis_20250412_170746.csv
+2025-04-12 17:07:46,804 - main - INFO - Training random_forest model
+2025-04-12 17:07:46,804 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:07:46,814 - src.models.prediction_model - INFO - Prepared features with 52 columns and 495 samples
+2025-04-12 17:07:46,820 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 17:07:47,145 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 17:07:47,146 - src.models.prediction_model - INFO - Accuracy: 0.6970
+2025-04-12 17:07:47,146 - src.models.prediction_model - INFO - Precision: 0.7358
+2025-04-12 17:07:47,146 - src.models.prediction_model - INFO - Recall: 0.7091
+2025-04-12 17:07:47,146 - src.models.prediction_model - INFO - F1 Score: 0.7222
+2025-04-12 17:07:47,150 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.65      0.68      0.67        44
+           1       0.74      0.71      0.72        55
+
+    accuracy                           0.70        99
+   macro avg       0.69      0.70      0.69        99
+weighted avg       0.70      0.70      0.70        99
+
+2025-04-12 17:07:47,155 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 17:07:47,155 - src.models.prediction_model - INFO - ics_26: 0.0574
+2025-04-12 17:07:47,155 - src.models.prediction_model - INFO - dmp_14: 0.0397
+2025-04-12 17:07:47,156 - src.models.prediction_model - INFO - cmf: 0.0342
+2025-04-12 17:07:47,156 - src.models.prediction_model - INFO - vwap: 0.0337
+2025-04-12 17:07:47,156 - src.models.prediction_model - INFO - dmn_14: 0.0317
+2025-04-12 17:07:47,156 - src.models.prediction_model - INFO - bbp_20_2.0: 0.0298
+2025-04-12 17:07:47,156 - src.models.prediction_model - INFO - volatility_ratio: 0.0294
+2025-04-12 17:07:47,157 - src.models.prediction_model - INFO - atr_14: 0.0288
+2025-04-12 17:07:47,157 - src.models.prediction_model - INFO - sma_50: 0.0287
+2025-04-12 17:07:47,157 - src.models.prediction_model - INFO - zscore_14: 0.0284
+2025-04-12 17:07:47,182 - src.models.prediction_model - INFO - Model saved to models\FARTCOIN_USDT_random_forest_20250412_170747.joblib
+2025-04-12 17:07:47,182 - main - INFO - Model saved to models\FARTCOIN_USDT_random_forest_20250412_170747.joblib
+2025-04-12 17:07:47,183 - main - INFO - Making predictions
+2025-04-12 17:07:47,184 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:07:47,217 - src.models.prediction_model - INFO - Model loaded from models\FARTCOIN_USDT_random_forest_20250412_170747.joblib
+2025-04-12 17:07:47,235 - src.models.prediction_model - INFO - Made predictions for 500 samples
+2025-04-12 17:07:47,261 - src.utils.helpers - INFO - Saved DataFrame to results/FARTCOIN_USDT_15m_predictions_20250412_170747.csv
+2025-04-12 17:07:47,264 - main - INFO - Backtesting predictions
+2025-04-12 17:07:47,266 - src.utils.helpers - INFO - Calculated performance metrics: Accuracy=0.9320, F1=0.9382
+2025-04-12 17:07:47,266 - main - INFO - Performance metrics: {'accuracy': 0.932, 'precision': 0.9347826086956522, 'recall': 0.9416058394160584, 'f1_score': 0.9381818181818182, 'true_positives': 258, 'false_positives': 18, 'true_negatives': 208, 'false_negatives': 16}
+2025-04-12 17:07:47,270 - src.utils.helpers - INFO - Calculated trading metrics: Win Rate=0.6250, Strategy Return=nan
+2025-04-12 17:07:47,271 - main - INFO - Trading metrics: {'total_trades': 104.0, 'winning_trades': 170, 'losing_trades': 102, 'win_rate': 0.625, 'strategy_return': nan, 'buy_hold_return': nan, 'annualized_strategy_return': nan, 'annualized_buy_hold_return': nan, 'strategy_max_drawdown': -0.0598571152732188, 'buy_hold_max_drawdown': -0.20088626292466727, 'strategy_sharpe': 3.3533761888478155, 'buy_hold_sharpe': 1.342531992729091}
+2025-04-12 17:07:47,272 - src.utils.helpers - ERROR - Error saving configuration to results/FARTCOIN_USDT_15m_backtest_20250412_170747.json: Object of type int64 is not JSON serializable
+2025-04-12 17:07:47,275 - main - INFO - Generating visualizations
+2025-04-12 17:07:47,275 - src.visualization.chart_generator - INFO - Initialized ChartGenerator with light theme
+2025-04-12 17:07:47,710 - main - INFO - Saved chart to charts/FARTCOIN_USDT_15m_20250412_170747.png
+2025-04-12 17:07:57,634 - main - INFO - Fetching data for FARTCOIN/USDT from kucoin
+2025-04-12 17:07:57,636 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 17:07:59,950 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for FARTCOIN/USDT
+2025-04-12 17:07:59,953 - src.utils.helpers - INFO - Saved DataFrame to data/FARTCOIN_USDT_15m_20250412_170759.csv
+2025-04-12 17:07:59,958 - main - INFO - Performing technical analysis
+2025-04-12 17:07:59,958 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:07:59,967 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:08:00,033 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:08:00,070 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:08:00,072 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:08:00,073 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:08:00,082 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:08:00,107 - src.utils.helpers - INFO - Saved DataFrame to results/FARTCOIN_USDT_15m_analysis_20250412_170800.csv
+2025-04-12 17:08:00,108 - main - INFO - Saved analysis results to results/FARTCOIN_USDT_15m_analysis_20250412_170800.csv
+2025-04-12 17:08:00,108 - main - INFO - Making predictions
+2025-04-12 17:08:00,108 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:08:00,129 - src.models.prediction_model - INFO - Model loaded from models\FARTCOIN_USDT_random_forest_20250412_170747.joblib
+2025-04-12 17:08:00,147 - src.models.prediction_model - INFO - Made predictions for 500 samples
+2025-04-12 17:08:00,173 - src.utils.helpers - INFO - Saved DataFrame to results/FARTCOIN_USDT_15m_predictions_20250412_170800.csv
+2025-04-12 17:08:00,173 - main - INFO - Backtesting predictions
+2025-04-12 17:08:00,173 - src.utils.helpers - ERROR - Missing columns: prediction or target
+2025-04-12 17:08:00,178 - src.utils.helpers - INFO - Calculated trading metrics: Win Rate=0.6250, Strategy Return=nan
+2025-04-12 17:08:00,178 - main - INFO - Trading metrics: {'total_trades': 104.0, 'winning_trades': 170, 'losing_trades': 102, 'win_rate': 0.625, 'strategy_return': nan, 'buy_hold_return': nan, 'annualized_strategy_return': nan, 'annualized_buy_hold_return': nan, 'strategy_max_drawdown': -0.0598571152732188, 'buy_hold_max_drawdown': -0.20088626292466727, 'strategy_sharpe': 3.348138642117163, 'buy_hold_sharpe': 1.3384775520233385}
+2025-04-12 17:08:00,179 - main - INFO - Generating visualizations
+2025-04-12 17:08:00,180 - src.visualization.chart_generator - INFO - Initialized ChartGenerator with light theme
+2025-04-12 17:08:00,540 - main - INFO - Saved chart to charts/FARTCOIN_USDT_15m_20250412_170800.png
+2025-04-12 17:08:08,505 - main - INFO - Fetching data for FARTCOIN/USDT from kucoin
+2025-04-12 17:08:08,507 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 17:08:10,298 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for FARTCOIN/USDT
+2025-04-12 17:08:10,302 - src.utils.helpers - INFO - Saved DataFrame to data/FARTCOIN_USDT_15m_20250412_170810.csv
+2025-04-12 17:08:10,306 - main - INFO - Performing technical analysis
+2025-04-12 17:08:10,306 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:08:10,316 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:08:10,376 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:08:10,413 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:08:10,416 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:08:10,417 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:08:10,426 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:08:10,449 - src.utils.helpers - INFO - Saved DataFrame to results/FARTCOIN_USDT_15m_analysis_20250412_170810.csv
+2025-04-12 17:08:10,450 - main - INFO - Saved analysis results to results/FARTCOIN_USDT_15m_analysis_20250412_170810.csv
+2025-04-12 17:08:10,450 - main - INFO - Training random_forest model
+2025-04-12 17:08:10,450 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 17:08:10,460 - src.models.prediction_model - INFO - Prepared features with 52 columns and 495 samples
+2025-04-12 17:08:10,467 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 17:08:10,792 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 17:08:10,793 - src.models.prediction_model - INFO - Accuracy: 0.6970
+2025-04-12 17:08:10,793 - src.models.prediction_model - INFO - Precision: 0.7358
+2025-04-12 17:08:10,793 - src.models.prediction_model - INFO - Recall: 0.7091
+2025-04-12 17:08:10,793 - src.models.prediction_model - INFO - F1 Score: 0.7222
+2025-04-12 17:08:10,798 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.65      0.68      0.67        44
+           1       0.74      0.71      0.72        55
+
+    accuracy                           0.70        99
+   macro avg       0.69      0.70      0.69        99
+weighted avg       0.70      0.70      0.70        99
+
+2025-04-12 17:08:10,802 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 17:08:10,803 - src.models.prediction_model - INFO - ics_26: 0.0574
+2025-04-12 17:08:10,803 - src.models.prediction_model - INFO - dmp_14: 0.0397
+2025-04-12 17:08:10,803 - src.models.prediction_model - INFO - cmf: 0.0342
+2025-04-12 17:08:10,803 - src.models.prediction_model - INFO - vwap: 0.0337
+2025-04-12 17:08:10,804 - src.models.prediction_model - INFO - dmn_14: 0.0317
+2025-04-12 17:08:10,804 - src.models.prediction_model - INFO - bbp_20_2.0: 0.0298
+2025-04-12 17:08:10,804 - src.models.prediction_model - INFO - volatility_ratio: 0.0294
+2025-04-12 17:08:10,804 - src.models.prediction_model - INFO - atr_14: 0.0288
+2025-04-12 17:08:10,804 - src.models.prediction_model - INFO - sma_50: 0.0287
+2025-04-12 17:08:10,805 - src.models.prediction_model - INFO - zscore_14: 0.0284
+2025-04-12 17:08:10,831 - src.models.prediction_model - INFO - Model saved to models\FARTCOIN_USDT_random_forest_20250412_170810.joblib
+2025-04-12 17:08:10,831 - main - INFO - Model saved to models\FARTCOIN_USDT_random_forest_20250412_170810.joblib
+2025-04-12 17:08:13,825 - main - INFO - Fetching data for FARTCOIN/USDT from kucoin
+2025-04-12 17:08:13,827 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 17:08:16,320 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for FARTCOIN/USDT
+2025-04-12 17:08:16,323 - src.utils.helpers - INFO - Saved DataFrame to data/FARTCOIN_USDT_15m_20250412_170816.csv
+2025-04-12 17:08:16,327 - main - INFO - Performing technical analysis
+2025-04-12 17:08:16,327 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 17:08:16,336 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 17:08:16,395 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 17:08:16,430 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 17:08:16,432 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 17:08:16,434 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 17:08:16,443 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 17:08:16,468 - src.utils.helpers - INFO - Saved DataFrame to results/FARTCOIN_USDT_15m_analysis_20250412_170816.csv
+2025-04-12 17:08:16,468 - main - INFO - Saved analysis results to results/FARTCOIN_USDT_15m_analysis_20250412_170816.csv
+2025-04-12 17:08:16,483 - main - INFO - Generating visualizations
+2025-04-12 17:08:16,483 - src.visualization.chart_generator - INFO - Initialized ChartGenerator with light theme
+2025-04-12 17:08:16,804 - main - INFO - Saved chart to charts/FARTCOIN_USDT_15m_20250412_170816.png
