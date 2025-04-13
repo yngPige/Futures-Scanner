@@ -8,3 +8,4 @@ pandas-ta>=0.3.14b0
 ccxt>=3.0.0
 yfinance>=0.1.70
 colorama>=0.4.6
+mplfinance>=0.12.9

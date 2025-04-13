@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import mplfinance as mpf
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import logging
@@ -33,9 +34,180 @@ class ChartGenerator:
         self.theme = theme
         logger.info(f"Initialized ChartGenerator with {theme} theme")
 
+    def create_candlestick_chart(self, df, title='Price Chart with Indicators', save_path=None):
+        """
+        Create a candlestick chart using mplfinance.
+
+        Args:
+            df (pd.DataFrame): DataFrame with OHLCV data
+            title (str): Chart title
+            save_path (str, optional): Path to save the chart
+
+        Returns:
+            matplotlib.figure.Figure: The generated figure
+        """
+        if df.empty:
+            logger.warning("Empty DataFrame provided, cannot create chart")
+            return None
+
+        try:
+            # Set theme
+            if self.theme == 'dark':
+                mpf_style = 'nightclouds'
+            else:
+                mpf_style = 'yahoo'
+
+            # Standardize column names to lowercase
+            df_cols = [col.lower() if isinstance(col, str) else
+                      (col[0].lower() if isinstance(col, tuple) else col)
+                      for col in df.columns]
+
+            # Check if we have OHLC data
+            required_cols = ['open', 'high', 'low', 'close']
+            has_ohlc = all(col in df_cols for col in required_cols)
+
+            if not has_ohlc:
+                logger.error(f"Missing required OHLC columns. Found: {df.columns}")
+                return None
+
+            # Create a copy of the DataFrame with standardized column names for mplfinance
+            ohlc_df = df.copy()
+
+            # Ensure column names are correct for mplfinance
+            column_mapping = {
+                'open': 'Open',
+                'high': 'High',
+                'low': 'Low',
+                'close': 'Close',
+                'volume': 'Volume'
+            }
+
+            for old_col, new_col in column_mapping.items():
+                if old_col in df_cols and new_col not in ohlc_df.columns:
+                    # Find the actual column name (might be capitalized differently)
+                    actual_col = [col for col in df.columns if col.lower() == old_col][0]
+                    ohlc_df[new_col] = ohlc_df[actual_col]
+
+            # Make sure the index is a DatetimeIndex
+            if not isinstance(ohlc_df.index, pd.DatetimeIndex):
+                logger.warning("Converting index to DatetimeIndex for mplfinance")
+                try:
+                    ohlc_df.index = pd.to_datetime(ohlc_df.index)
+                except Exception as e:
+                    logger.error(f"Could not convert index to DatetimeIndex: {e}")
+                    return None
+
+            # Create a copy with just the OHLCV columns for mplfinance
+            ohlc_plot_df = ohlc_df[['Open', 'High', 'Low', 'Close']].copy()
+            if 'Volume' in ohlc_df.columns:
+                ohlc_plot_df['Volume'] = ohlc_df['Volume']
+
+            # Add buy/sell signals as markers if available
+            markers = []
+            if 'signal' in df.columns:
+                buy_signals = df[df['signal'] == 1]
+                sell_signals = df[df['signal'] == -1]
+
+                # If there are too many signals, sample them to reduce clutter
+                max_signals = 10  # Maximum number of signals to display
+                if len(buy_signals) > max_signals:
+                    buy_signals = buy_signals.sample(max_signals, random_state=42)
+                if len(sell_signals) > max_signals:
+                    sell_signals = sell_signals.sample(max_signals, random_state=42)
+
+                # Add buy signals
+                for idx in buy_signals.index:
+                    if idx in ohlc_plot_df.index:
+                        markers.append(mpf.make_addplot(
+                            pd.Series(ohlc_plot_df.loc[idx, 'Low'] * 0.99, index=[idx]),
+                            type='scatter', marker='^', markersize=100, color='green'
+                        ))
+
+                # Add sell signals
+                for idx in sell_signals.index:
+                    if idx in ohlc_plot_df.index:
+                        markers.append(mpf.make_addplot(
+                            pd.Series(ohlc_plot_df.loc[idx, 'High'] * 1.01, index=[idx]),
+                            type='scatter', marker='v', markersize=100, color='red'
+                        ))
+
+            # Add predictions as markers if available
+            if 'prediction' in df.columns:
+                if 'prediction_probability' in df.columns:
+                    # Only show high-confidence predictions (probability > 0.7)
+                    buy_preds = df[(df['prediction'] == 1) & (df['prediction_probability'] > 0.7)]
+                    sell_preds = df[(df['prediction'] == 0) & (df['prediction_probability'] > 0.7)]
+                else:
+                    # If probability is not available, just sample a few predictions
+                    buy_preds = df[df['prediction'] == 1]
+                    sell_preds = df[df['prediction'] == 0]
+
+                # If there are too many predictions, sample them to reduce clutter
+                max_preds = 15  # Maximum number of predictions to display
+                if len(buy_preds) > max_preds:
+                    buy_preds = buy_preds.sample(max_preds, random_state=42)
+                if len(sell_preds) > max_preds:
+                    sell_preds = sell_preds.sample(max_preds, random_state=42)
+
+                # Add bullish predictions
+                for idx in buy_preds.index:
+                    if idx in ohlc_plot_df.index:
+                        markers.append(mpf.make_addplot(
+                            pd.Series(ohlc_plot_df.loc[idx, 'Low'] * 0.98, index=[idx]),
+                            type='scatter', marker='o', markersize=50, color='lime'
+                        ))
+
+                # Add bearish predictions
+                for idx in sell_preds.index:
+                    if idx in ohlc_plot_df.index:
+                        markers.append(mpf.make_addplot(
+                            pd.Series(ohlc_plot_df.loc[idx, 'High'] * 1.02, index=[idx]),
+                            type='scatter', marker='o', markersize=50, color='orange'
+                        ))
+
+            # Add technical indicators as plots
+            if 'rsi_14' in df.columns:
+                markers.append(mpf.make_addplot(
+                    df['rsi_14'], panel=1, color='purple', secondary_y=False
+                ))
+
+            if 'MACD_12_26_9' in df.columns and 'MACDs_12_26_9' in df.columns:
+                markers.append(mpf.make_addplot(
+                    df['MACD_12_26_9'], panel=2, color='blue', secondary_y=False
+                ))
+                markers.append(mpf.make_addplot(
+                    df['MACDs_12_26_9'], panel=2, color='red', secondary_y=False
+                ))
+
+            # Plot the candlestick chart with all markers
+            fig, axes = mpf.plot(
+                ohlc_plot_df,
+                type='candle',
+                style=mpf_style,
+                title=title,
+                figsize=(12, 10),
+                volume=True if 'Volume' in ohlc_plot_df.columns else False,
+                panel_ratios=(4, 1, 1) if 'MACD_12_26_9' in df.columns else (4, 1),
+                addplot=markers if markers else None,
+                returnfig=True
+            )
+
+            # Save the figure if a path is provided
+            if save_path:
+                fig.savefig(save_path)
+                logger.info(f"Chart saved to {save_path}")
+
+            return fig
+
+        except Exception as e:
+            logger.error(f"Error creating candlestick chart: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
     def plot_price_with_indicators(self, df, title='Price Chart with Indicators', save_path=None):
         """
-        Create a price chart with key indicators using Matplotlib.
+        Create a price chart with key indicators using Matplotlib or mplfinance.
 
         Args:
             df (pd.DataFrame): DataFrame with price data and indicators
@@ -45,6 +217,12 @@ class ChartGenerator:
         Returns:
             matplotlib.figure.Figure: The generated figure
         """
+        # Try to create a candlestick chart first
+        fig = self.create_candlestick_chart(df, title, save_path)
+        if fig is not None:
+            return fig
+
+        # If candlestick chart fails, fall back to the original line chart
         if df.empty:
             logger.warning("Empty DataFrame provided, cannot create chart")
             return None
@@ -65,13 +243,11 @@ class ChartGenerator:
             # Create a mapping from lowercase to actual column names
             col_mapping = {col.lower() if isinstance(col, str) else col: col for col in df.columns}
 
-            # Check if 'close' is in the columns
+            # Plot price as a line
             if 'close' in df_cols:
                 close_col = col_mapping.get('close', 'Close')
-                # Plot price and moving averages
                 ax1.plot(df.index, df[close_col], label='Close Price', linewidth=2)
             elif 'Close' in df.columns:
-                # Try with capitalized column name
                 ax1.plot(df.index, df['Close'], label='Close Price', linewidth=2)
             else:
                 logger.error(f"Could not find 'close' column in {df.columns}")

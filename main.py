@@ -1,5 +1,5 @@
 """
-Crypto Futures Scanner
+3lacks Crypto Futures
 
 This application parses cryptocurrency futures markets with a pretrained AI model
 for optimized technical analysis to provide price movement predictions.

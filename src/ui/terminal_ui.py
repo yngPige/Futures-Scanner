@@ -5,14 +5,11 @@ This module provides a terminal-based user interface for the Crypto Futures Scan
 """
 
 import os
-import sys
 import time
 import logging
 import argparse
-from datetime import datetime
-import pandas as pd
-import matplotlib.pyplot as plt
 from colorama import init, Fore, Style
+from src.ui.terminal_output import TerminalOutputGenerator
 
 # Initialize colorama
 init()
@@ -27,6 +24,9 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+
+
 
 class TerminalUI:
     """Terminal-based user interface for Crypto Futures Scanner."""
@@ -45,11 +45,12 @@ class TerminalUI:
             'model_type': 'random_forest',
             'model_path': None,
             'theme': 'dark',
-            'interactive': False,
             'save': True,
-            'no_display': False,
             'tune': False
         }
+
+        # Create terminal output generator
+        self.output_generator = TerminalOutputGenerator(theme=self.settings['theme'])
 
         # Available options
         self.available_symbols = [
@@ -179,9 +180,7 @@ class TerminalUI:
         self.print_menu_item("5", "Change Model Type")
         self.print_menu_item("6", "Select Model Path")
         self.print_menu_item("7", "Change Theme")
-        self.print_menu_item("8", "Toggle Interactive Charts")
         self.print_menu_item("9", "Toggle Save Results")
-        self.print_menu_item("0", "Toggle Display Charts")
         self.print_menu_item("t", "Toggle Hyperparameter Tuning")
         self.print_menu_item("b", "Back to Main Menu")
 
@@ -203,18 +202,12 @@ class TerminalUI:
             self.select_model_path()
         elif choice == '7':
             self.change_theme()
-        elif choice == '8':
-            self.settings['interactive'] = not self.settings['interactive']
-            self.print_success(f"Interactive charts {'enabled' if self.settings['interactive'] else 'disabled'}.")
-            time.sleep(1)
+
         elif choice == '9':
             self.settings['save'] = not self.settings['save']
             self.print_success(f"Save results {'enabled' if self.settings['save'] else 'disabled'}.")
             time.sleep(1)
-        elif choice == '0':
-            self.settings['no_display'] = not self.settings['no_display']
-            self.print_success(f"Display charts {'disabled' if self.settings['no_display'] else 'enabled'}.")
-            time.sleep(1)
+
         elif choice == 't':
             self.settings['tune'] = not self.settings['tune']
             self.print_success(f"Hyperparameter tuning {'enabled' if self.settings['tune'] else 'disabled'}.")
@@ -466,7 +459,7 @@ class TerminalUI:
         self.print_header("Analyzing Data")
 
         try:
-            from main import fetch_data, analyze_data, visualize
+            from main import fetch_data, analyze_data
 
             args = self.build_command_args()
 
@@ -484,12 +477,18 @@ class TerminalUI:
                     print("\nSample analyzed data:")
                     print(df_analyzed.head().to_string())
 
-                    # Visualize
-                    if not args.no_display:
-                        self.print_info("Generating visualization...")
-                        fig = visualize(df_analyzed, args)
-                        if fig is None:
-                            self.print_warning("Visualization failed, but analysis was successful.")
+                    # Generate and open terminal output
+                    self.print_info("Opening analysis in new terminal window...")
+                    script_path = self.output_generator.generate_output(
+                        df_analyzed, args.symbol, args.timeframe, report_type='analysis'
+                    )
+                    if script_path:
+                        if self.output_generator.open_terminal(script_path):
+                            self.print_success("Analysis opened in new terminal window.")
+                        else:
+                            self.print_error("Failed to open terminal window.")
+                    else:
+                        self.print_error("Failed to generate analysis output.")
                 else:
                     self.print_error("Analysis resulted in empty DataFrame or failed.")
             else:
@@ -548,7 +547,7 @@ class TerminalUI:
             return
 
         try:
-            from main import fetch_data, analyze_data, predict, visualize
+            from main import fetch_data, analyze_data, predict
 
             args = self.build_command_args()
 
@@ -570,12 +569,18 @@ class TerminalUI:
                         print("\nSample predictions:")
                         print(df_predictions[['close', 'prediction', 'prediction_probability']].tail().to_string())
 
-                        # Visualize
-                        if not args.no_display:
-                            self.print_info("Generating visualization...")
-                            fig = visualize(df_predictions, args)
-                            if fig is None:
-                                self.print_warning("Visualization failed, but predictions were successful.")
+                        # Generate and open terminal output
+                        self.print_info("Opening predictions in new terminal window...")
+                        script_path = self.output_generator.generate_output(
+                            df_predictions, args.symbol, args.timeframe, report_type='prediction'
+                        )
+                        if script_path:
+                            if self.output_generator.open_terminal(script_path):
+                                self.print_success("Predictions opened in new terminal window.")
+                            else:
+                                self.print_error("Failed to open terminal window.")
+                        else:
+                            self.print_error("Failed to generate predictions output.")
                     else:
                         self.print_error("Failed to make predictions.")
                 else:
@@ -598,7 +603,7 @@ class TerminalUI:
             return
 
         try:
-            from main import fetch_data, analyze_data, predict, backtest, visualize
+            from main import fetch_data, analyze_data, predict, backtest
 
             args = self.build_command_args()
 
@@ -627,12 +632,19 @@ class TerminalUI:
                             for key, value in trading_metrics.items():
                                 print(f"  {key}: {value}")
 
-                        # Visualize
-                        if not args.no_display:
-                            self.print_info("Generating visualization...")
-                            fig = visualize(df_predictions, args, metrics=(performance_metrics, trading_metrics))
-                            if fig is None:
-                                self.print_warning("Visualization failed, but backtest was successful.")
+                        # Generate and open terminal output
+                        self.print_info("Opening backtest results in new terminal window...")
+                        script_path = self.output_generator.generate_output(
+                            df_predictions, args.symbol, args.timeframe, report_type='backtest',
+                            performance_metrics=performance_metrics, trading_metrics=trading_metrics
+                        )
+                        if script_path:
+                            if self.output_generator.open_terminal(script_path):
+                                self.print_success("Backtest results opened in new terminal window.")
+                            else:
+                                self.print_error("Failed to open terminal window.")
+                        else:
+                            self.print_error("Failed to generate backtest output.")
                     else:
                         self.print_error("Failed to make predictions.")
                 else:
@@ -650,7 +662,7 @@ class TerminalUI:
         self.print_header("Running All Steps")
 
         try:
-            from main import fetch_data, analyze_data, train_model, predict, backtest, visualize
+            from main import fetch_data, analyze_data, train_model, predict, backtest
 
             args = self.build_command_args()
 
@@ -720,12 +732,19 @@ class TerminalUI:
                 for key, value in trading_metrics.items():
                     print(f"  {key}: {value}")
 
-            # Visualize
-            if not args.no_display:
-                self.print_info("\nGenerating visualization...")
-                fig = visualize(df_predictions, args, metrics=(performance_metrics, trading_metrics))
-                if fig is None:
-                    self.print_warning("Visualization failed, but all other steps were successful.")
+            # Generate and open terminal output
+            self.print_info("\nOpening complete analysis in new terminal window...")
+            script_path = self.output_generator.generate_output(
+                df_predictions, args.symbol, args.timeframe, report_type='all',
+                performance_metrics=performance_metrics, trading_metrics=trading_metrics
+            )
+            if script_path:
+                if self.output_generator.open_terminal(script_path):
+                    self.print_success("Complete analysis opened in new terminal window.")
+                else:
+                    self.print_error("Failed to open terminal window.")
+            else:
+                self.print_error("Failed to generate analysis output.")
 
             self.print_success("\nSuccessfully completed all operations.")
 
