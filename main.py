@@ -20,6 +20,7 @@ from src.data.data_fetcher import DataFetcher
 from src.analysis.technical_analysis import TechnicalAnalyzer
 from src.models.prediction_model import PredictionModel
 from src.visualization.chart_generator import ChartGenerator
+from src.visualization.terminal_chart import TerminalChartGenerator
 from src.utils.helpers import (
     create_directory, save_dataframe, load_dataframe,
     save_config, load_config, calculate_performance_metrics,
@@ -87,6 +88,8 @@ def parse_arguments():
                         help='Chart theme')
     parser.add_argument('--interactive', action='store_true',
                         help='Generate interactive charts')
+    parser.add_argument('--terminal-chart', action='store_true',
+                        help='Display chart in terminal window')
 
     # Other arguments
     parser.add_argument('--save', action='store_true',
@@ -302,66 +305,98 @@ def visualize(df, args, metrics=None, llm_recommendation=None):
         logger.warning("Empty DataFrame provided, cannot create visualization")
         return None
 
-    # Initialize chart generator
-    chart_gen = ChartGenerator(theme=args.theme)
+    # Check if we should use terminal chart
+    use_terminal_chart = args.terminal_chart if hasattr(args, 'terminal_chart') else False
 
     # Check if we have LLM recommendations and should use advanced chart
     use_advanced_chart = args.interactive and llm_recommendation and 'error' not in llm_recommendation
 
-    # Generate charts
-    if args.interactive:
+    if use_terminal_chart:
+        # Initialize terminal chart generator
+        terminal_chart_gen = TerminalChartGenerator(theme=args.theme)
+
+        # Generate terminal charts
         if use_advanced_chart:
             # Use advanced chart with entry/exit suggestions
-            logger.info("Creating advanced chart with entry/exit suggestions")
-            fig = chart_gen.create_advanced_chart_with_suggestions(
+            logger.info("Creating advanced terminal chart with entry/exit suggestions")
+            success = terminal_chart_gen.create_advanced_chart_with_suggestions(
                 df,
                 llm_analysis=llm_recommendation,
                 title=f"{args.symbol} - {args.timeframe} Timeframe with Trading Levels"
             )
+
+            if not success:
+                logger.warning("Failed to create advanced terminal chart")
+                return None
         else:
-            # Use regular interactive chart
-            fig = chart_gen.create_interactive_chart(
+            # Use regular candlestick chart
+            logger.info("Creating terminal candlestick chart")
+            success = terminal_chart_gen.create_candlestick_chart(
                 df,
                 title=f"{args.symbol} - {args.timeframe} Timeframe"
             )
 
-        # Check if figure was created successfully
-        if fig is None:
-            logger.warning("Failed to create interactive chart")
-            return None
-
-        # Save chart if requested
-        if args.save:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            chart_type = "advanced" if use_advanced_chart else "interactive"
-            filename = f"charts/{args.symbol.replace('/', '_')}_{args.timeframe}_{chart_type}_{timestamp}.html"
-            pio.write_html(fig, file=filename)
-            logger.info(f"Saved {chart_type} chart to {filename}")
-
-        # Display chart if requested
-        if not args.no_display:
-            fig.show()
+            if not success:
+                logger.warning("Failed to create terminal candlestick chart")
+                return None
     else:
-        fig = chart_gen.plot_price_with_indicators(
-            df,
-            title=f"{args.symbol} - {args.timeframe} Timeframe"
-        )
+        # Initialize regular chart generator
+        chart_gen = ChartGenerator(theme=args.theme)
 
-        # Check if figure was created successfully
-        if fig is None:
-            logger.warning("Failed to create chart")
-            return None
+        # Generate charts
+        if args.interactive:
+            if use_advanced_chart:
+                # Use advanced chart with entry/exit suggestions
+                logger.info("Creating advanced chart with entry/exit suggestions")
+                fig = chart_gen.create_advanced_chart_with_suggestions(
+                    df,
+                    llm_analysis=llm_recommendation,
+                    title=f"{args.symbol} - {args.timeframe} Timeframe with Trading Levels"
+                )
+            else:
+                # Use regular interactive chart
+                fig = chart_gen.create_interactive_chart(
+                    df,
+                    title=f"{args.symbol} - {args.timeframe} Timeframe"
+                )
 
-        # Save chart if requested
-        if args.save:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"charts/{args.symbol.replace('/', '_')}_{args.timeframe}_{timestamp}.png"
-            fig.savefig(filename)
-            logger.info(f"Saved chart to {filename}")
+            # Check if figure was created successfully
+            if fig is None:
+                logger.warning("Failed to create interactive chart")
+                return None
 
-        # Display chart if requested
-        if not args.no_display:
-            plt.show()
+            # Save chart if requested
+            if args.save:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                chart_type = "advanced" if use_advanced_chart else "interactive"
+                filename = f"charts/{args.symbol.replace('/', '_')}_{args.timeframe}_{chart_type}_{timestamp}.html"
+                pio.write_html(fig, file=filename)
+                logger.info(f"Saved {chart_type} chart to {filename}")
+
+            # Display chart if requested
+            if not args.no_display:
+                fig.show()
+        else:
+            fig = chart_gen.plot_price_with_indicators(
+                df,
+                title=f"{args.symbol} - {args.timeframe} Timeframe"
+            )
+
+            # Check if figure was created successfully
+            if fig is None:
+                logger.warning("Failed to create chart")
+                return None
+
+            # Save chart if requested
+            if args.save:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"charts/{args.symbol.replace('/', '_')}_{args.timeframe}_{timestamp}.png"
+                fig.savefig(filename)
+                logger.info(f"Saved chart to {filename}")
+
+            # Display chart if requested
+            if not args.no_display:
+                plt.show()
 
     return fig
 

@@ -224,13 +224,69 @@ class LocalLLMAnalyzer:
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(model_file_path), exist_ok=True)
 
-            # Import required modules
+            # Try to use huggingface_hub if available
+            try:
+                from huggingface_hub import hf_hub_download
+
+                # Get repo_id and filename from model info
+                repo_id = None
+                filename = None
+
+                # Try to find the model in AVAILABLE_MODELS
+                for key, info in AVAILABLE_MODELS.items():
+                    if info.get('name') == self.model_name or key == self.model_name:
+                        repo_id = info.get('repo_id')
+                        filename = info.get('filename')
+                        break
+
+                if repo_id and filename:
+                    logger.info(f"Downloading model from Hugging Face Hub: {repo_id}/{filename}")
+                    # Download the model using huggingface_hub
+                    downloaded_path = hf_hub_download(
+                        repo_id=repo_id,
+                        filename=filename,
+                        local_dir=os.path.dirname(model_file_path),
+                        local_dir_use_symlinks=False
+                    )
+
+                    # Check if the file was downloaded successfully
+                    if os.path.exists(downloaded_path) and os.path.getsize(downloaded_path) > 1000000:
+                        logger.info(f"Successfully downloaded model to {downloaded_path}")
+                        # If the downloaded path is different from the expected path, copy the file
+                        if downloaded_path != model_file_path:
+                            import shutil
+                            shutil.copy2(downloaded_path, model_file_path)
+                            logger.info(f"Copied model from {downloaded_path} to {model_file_path}")
+                        return True
+                    else:
+                        logger.warning(f"Downloaded file is too small or does not exist: {downloaded_path}")
+                        # Fall back to direct download
+                else:
+                    logger.warning("No repo_id or filename found for the model, falling back to direct download")
+            except ImportError:
+                logger.warning("huggingface_hub not available, falling back to direct download")
+            except Exception as e:
+                logger.warning(f"Error downloading from Hugging Face Hub: {e}, falling back to direct download")
+
+            # Fall back to direct download if huggingface_hub fails
+            logger.info(f"Downloading model from URL: {model_url}")
             import requests
             from tqdm import tqdm
 
             # Download with progress bar
-            response = requests.get(model_url, stream=True)
+            response = requests.get(model_url, stream=True, timeout=30)
+
+            # Check if the request was successful
+            if response.status_code != 200:
+                logger.error(f"Failed to download model: HTTP status code {response.status_code}")
+                return False
+
             total_size = int(response.headers.get('content-length', 0))
+
+            # Check if content length is reasonable
+            if total_size < 1000000:  # Less than 1MB is suspicious for a model file
+                logger.error(f"Content length is suspiciously small: {total_size} bytes")
+                return False
 
             with open(model_file_path, 'wb') as f, tqdm(
                 desc=self.model_name,
@@ -683,6 +739,8 @@ AVAILABLE_MODELS = {
         "name": "llama-3-8b-instruct.Q4_K_M.gguf",
         "description": "Llama 3 8B Instruct (Quantized 4-bit)",
         "url": "https://huggingface.co/TheBloke/Llama-3-8B-Instruct-GGUF/resolve/main/llama-3-8b-instruct.Q4_K_M.gguf",
+        "repo_id": "TheBloke/Llama-3-8B-Instruct-GGUF",
+        "filename": "llama-3-8b-instruct.Q4_K_M.gguf",
         "size_gb": 4.37,
         "details": "General-purpose LLM with good performance across various tasks. Balanced between size and capability.",
         "trading_focus": "Low",

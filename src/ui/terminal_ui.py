@@ -5,6 +5,7 @@ This module provides a terminal-based user interface for the Crypto Futures Scan
 """
 
 import os
+import sys
 import time
 import logging
 import argparse
@@ -375,6 +376,31 @@ class TerminalUI:
             # Print the line with proper spacing
             print(f"{menu_str}{' ' * (max_menu_length - len(menu_str.replace(Fore.GREEN, '').replace(Style.RESET_ALL, '').replace('✓', '')))}  {settings_str}")
 
+        # Display toggle indicators at the bottom
+        self.print_toggle_indicators()
+
+    def print_toggle_indicators(self):
+        """Print toggle indicators at the bottom of the screen."""
+        # Create toggle indicators with hotkeys in brackets
+        toggles = [
+            ("g", "GPU Acceleration", self.settings['use_gpu']),
+            ("s", "Save Results", self.settings['save']),
+            ("t", "Hyperparameter Tuning", self.settings['tune']),
+            ("l", "LLM Analysis", self.settings['use_llm'])
+        ]
+
+        # Add a separator line
+        print("\n" + "-" * 80)
+
+        # Print each toggle indicator on its own
+        for key, desc, enabled in toggles:
+            # Use green text for the entire option if the toggle is enabled
+            if enabled:
+                print(f"[{Fore.GREEN}{key}{Style.RESET_ALL}] {Fore.GREEN}{desc}{Style.RESET_ALL}", end="  ")
+            else:
+                print(f"[{key}] {desc}", end="  ")
+
+        # Add a newline at the end
         print()
 
     def main_menu(self):
@@ -420,6 +446,23 @@ class TerminalUI:
         elif choice.lower() == 'q':
             self.show_exit_screen()
             self.running = False
+        # Handle toggle hotkeys
+        elif choice.lower() == 'g':
+            self.settings['use_gpu'] = not self.settings['use_gpu']
+            self.print_success(f"GPU Acceleration {'enabled' if self.settings['use_gpu'] else 'disabled'}.")
+            time.sleep(1)
+        elif choice.lower() == 's':
+            self.settings['save'] = not self.settings['save']
+            self.print_success(f"Save Results {'enabled' if self.settings['save'] else 'disabled'}.")
+            time.sleep(1)
+        elif choice.lower() == 't':
+            self.settings['tune'] = not self.settings['tune']
+            self.print_success(f"Hyperparameter Tuning {'enabled' if self.settings['tune'] else 'disabled'}.")
+            time.sleep(1)
+        elif choice.lower() == 'l':
+            self.settings['use_llm'] = not self.settings['use_llm']
+            self.print_success(f"LLM Analysis {'enabled' if self.settings['use_llm'] else 'disabled'}.")
+            time.sleep(1)
         else:
             self.print_error("Invalid choice. Please try again.")
             time.sleep(1)
@@ -434,11 +477,7 @@ class TerminalUI:
             ("5", "Change Model Type"),
             ("6", "Select Model Path"),
             ("7", "Change Theme"),
-            ("8", "Toggle LLM Analysis"),
-            ("9", "Change LLM Model"),
-            ("g", "Toggle GPU Acceleration"),
-            ("s", "Toggle Save Results"),
-            ("t", "Toggle Hyperparameter Tuning"),
+            ("8", "Change LLM Model"),
             ("b", "Back to Main Menu")
         ]
 
@@ -461,22 +500,23 @@ class TerminalUI:
         elif choice == '7':
             self.change_theme()
         elif choice == '8':
-            self.settings['use_llm'] = not self.settings['use_llm']
-            self.print_success(f"LLM Analysis {'enabled' if self.settings['use_llm'] else 'disabled'}.")
-            time.sleep(1)
-        elif choice == '9':
             self.change_llm_model()
-        elif choice == 'g':
+        # Handle toggle hotkeys
+        elif choice.lower() == 'g':
             self.settings['use_gpu'] = not self.settings['use_gpu']
             self.print_success(f"GPU Acceleration {'enabled' if self.settings['use_gpu'] else 'disabled'}.")
             time.sleep(1)
-        elif choice == 's':
+        elif choice.lower() == 's':
             self.settings['save'] = not self.settings['save']
-            self.print_success(f"Save results {'enabled' if self.settings['save'] else 'disabled'}.")
+            self.print_success(f"Save Results {'enabled' if self.settings['save'] else 'disabled'}.")
             time.sleep(1)
-        elif choice == 't':
+        elif choice.lower() == 't':
             self.settings['tune'] = not self.settings['tune']
-            self.print_success(f"Hyperparameter tuning {'enabled' if self.settings['tune'] else 'disabled'}.")
+            self.print_success(f"Hyperparameter Tuning {'enabled' if self.settings['tune'] else 'disabled'}.")
+            time.sleep(1)
+        elif choice.lower() == 'l':
+            self.settings['use_llm'] = not self.settings['use_llm']
+            self.print_success(f"LLM Analysis {'enabled' if self.settings['use_llm'] else 'disabled'}.")
             time.sleep(1)
         elif choice.lower() == 'b':
             self.current_menu = self.main_menu
@@ -1172,6 +1212,12 @@ class TerminalUI:
             args.llm_model = self.settings['llm_model']
             args.use_gpu = self.settings['use_gpu']
 
+        # Add terminal chart option (default to False)
+        args.terminal_chart = False
+
+        # Add no_display option (default to False)
+        args.no_display = False
+
         return args
 
     def fetch_data(self):
@@ -1686,13 +1732,44 @@ class TerminalUI:
 
             # Check if model exists, offer to download if not
             model_file_path = os.path.join(DEFAULT_MODEL_PATH, model_name)
-            if not os.path.exists(model_file_path):
-                self.print_warning(f"Model file not found: {model_name}")
+            if not os.path.exists(model_file_path) or os.path.getsize(model_file_path) < 1000000:  # Less than 1MB is suspicious
+                if os.path.exists(model_file_path) and os.path.getsize(model_file_path) < 1000000:
+                    self.print_warning(f"Model file exists but appears to be corrupted or incomplete: {model_name}")
+                    self.print_warning(f"File size: {os.path.getsize(model_file_path) / (1024*1024):.2f} MB")
+                else:
+                    self.print_warning(f"Model file not found: {model_name}")
+
+                # Show model info
+                self.print_info(f"Model: {self.settings['llm_model']} ({model_info.get('size_gb', 'unknown')} GB)")
+                self.print_info(f"Description: {model_info.get('description', 'No description available')}")
+
+                # Ask to download
                 download = self.get_input(f"Would you like to download the {self.settings['llm_model']} model now? (y/n): ")
                 if download.lower() == 'y':
-                    success = self.download_llm_model(self.settings['llm_model'])
+                    # Try using the dedicated script first
+                    try:
+                        import subprocess
+                        self.print_info(f"Downloading model using dedicated script...")
+                        cmd = [sys.executable, "download_llm_model.py", "download", self.settings['llm_model']]
+                        result = subprocess.run(cmd, capture_output=True, text=True)
+
+                        if result.returncode == 0:
+                            self.print_success("Model downloaded successfully using dedicated script.")
+                            success = True
+                        else:
+                            self.print_warning(f"Failed to download model using dedicated script: {result.stderr}")
+                            self.print_info("Falling back to built-in download method...")
+                            success = self.download_llm_model(self.settings['llm_model'])
+                    except Exception as e:
+                        self.print_warning(f"Error using dedicated script: {e}")
+                        self.print_info("Falling back to built-in download method...")
+                        success = self.download_llm_model(self.settings['llm_model'])
+
                     if not success:
                         self.print_error("Failed to download model. Cannot proceed with LLM analysis.")
+                        self.print_info("You can try downloading the model manually:")
+                        self.print_info(f"1. Download from: {model_info.get('url')}")
+                        self.print_info(f"2. Save to: {model_file_path}")
                         self.wait_for_key()
                         return
                 else:
@@ -1733,7 +1810,15 @@ class TerminalUI:
 
             # Check if LLM was initialized successfully
             if llm_analyzer.llm is None:
-                self.print_error("Failed to initialize LLM. Check the logs for details.")
+                self.print_error("ERROR - Failed to initialize LLM model.")
+                self.print_error(f"Error loading model: Failed to load model from file: {model_file_path}")
+                self.print_info("\nPossible solutions:")
+                self.print_info("1. Try downloading the model again using the dedicated script:")
+                self.print_info(f"   python download_llm_model.py download {self.settings['llm_model']} --force")
+                self.print_info("2. Check if your system meets the requirements for running LLMs:")
+                self.print_info("   - At least 16GB of RAM")
+                self.print_info("   - For GPU acceleration: NVIDIA GPU with at least 8GB VRAM")
+                self.print_info("3. Try a smaller model if your system has limited resources")
                 self.wait_for_key()
                 return
 
@@ -2059,6 +2144,27 @@ class TerminalUI:
 
                         if risk_reward is not None:
                             print(f"{Fore.YELLOW}Risk/Reward Ratio:{Style.RESET_ALL} {risk_reward}")
+
+                    # Print full analysis
+                    print("\n" + recommendation['analysis'])
+
+                    # Ask user if they want to display a chart
+                    chart_choice = self.get_input("\nDisplay chart? (t)erminal, (b)rowser, or (n)o: ").lower()
+
+                    if chart_choice == 't':
+                        # Set terminal chart option
+                        args.terminal_chart = True
+                        args.interactive = False
+                        self.print_info("Displaying chart in terminal...")
+                        from main import visualize
+                        visualize(df_analyzed, args, llm_recommendation=recommendation)
+                    elif chart_choice == 'b':
+                        # Use browser chart
+                        args.terminal_chart = False
+                        args.interactive = True
+                        self.print_info("Displaying chart in browser...")
+                        from main import visualize
+                        visualize(df_analyzed, args, llm_recommendation=recommendation)
                 else:
                     error_msg = recommendation.get("error", "Unknown error") if recommendation else "Failed to get recommendation"
                     self.print_warning(f"LLM analysis skipped: {error_msg}")
@@ -2080,7 +2186,7 @@ class TerminalUI:
         self.wait_for_key()
 
     def display_collected_logs(self, title="Process Logs", operation_start_time=None):
-        """Display all collected logs in a stylish format.
+        """Display collected logs in a concise format.
 
         Args:
             title (str): Title for the log display
@@ -2115,17 +2221,46 @@ class TerminalUI:
                     # If parsing fails, include the log anyway
                     filtered_logs.append(log)
 
-        # Remove duplicate logs (same timestamp and message)
-        unique_logs = []
-        seen = set()
-        for log in filtered_logs:
-            log_str = f"{log[0]}:{log[1]}"
-            if log_str not in seen:
-                seen.add(log_str)
-                unique_logs.append(log)
+        # Group logs by type (data retrieval, analysis, prediction, etc.)
+        # and only keep the first and last log of each group
 
-        # Print logs with alternating background colors
-        for i, (timestamp, message) in enumerate(unique_logs):
+        # Define log groups based on keywords
+        group_keywords = {
+            'data': ['data', 'candles', 'downloading', 'fetching', 'retrieving'],
+            'analysis': ['analyzing', 'indicators', 'patterns', 'technical', 'momentum', 'trend'],
+            'model': ['model', 'machine learning', 'training', 'inference'],
+            'prediction': ['prediction', 'signals', 'forecasting', 'probabilities'],
+            'llm': ['llm', 'ai', 'analyzing market data']
+        }
+
+        # Function to determine log group
+        def get_log_group(message):
+            message_lower = message.lower()
+            for group, keywords in group_keywords.items():
+                if any(keyword in message_lower for keyword in keywords):
+                    return group
+            return 'other'
+
+        # Extract only the most important logs (first, last, and completed ones)
+        important_logs = []
+        completion_logs = []
+
+        for timestamp, message in filtered_logs:
+            # Always keep completion logs
+            if "completed" in message.lower() or "✓" in message:
+                completion_logs.append((timestamp, message))
+            # Keep the first log of each group
+            elif not any(get_log_group(message) == get_log_group(log[1]) for log in important_logs):
+                important_logs.append((timestamp, message))
+
+        # Combine important logs and completion logs
+        concise_logs = important_logs + completion_logs
+
+        # Sort logs by timestamp
+        concise_logs.sort(key=lambda x: x[0])
+
+        # Print logs with colors
+        for timestamp, message in concise_logs:
             # Choose color based on message content
             if "error" in message.lower() or "failed" in message.lower():
                 color = Fore.RED
@@ -2134,9 +2269,8 @@ class TerminalUI:
             elif "completed" in message.lower() or "success" in message.lower() or "✓" in message:
                 color = Fore.GREEN
             else:
-                # Alternate between colors for regular messages
-                colors = [Fore.CYAN, Fore.BLUE, Fore.MAGENTA]
-                color = colors[i % len(colors)]
+                # Use cyan for regular messages
+                color = Fore.CYAN
 
             # Print formatted log entry
             print(f"{Fore.WHITE}[{timestamp}]{Style.RESET_ALL} {color}{message}{Style.RESET_ALL}")
@@ -2146,9 +2280,6 @@ class TerminalUI:
 
         print("=" * width)
         print()
-
-        # Clear logs after displaying
-        self.collected_logs = []
 
     def show_how_to_use(self):
         """Display the 'How to Use' guide."""
@@ -2332,11 +2463,13 @@ class TerminalUI:
         self.clear_screen()
         width = 80
         print(Fore.CYAN + "=" * width + Style.RESET_ALL)
-        title = "Thank you for using 3lacks Scanner"
+        title = ""
         print(Fore.CYAN + f"{title:^{width}}" + Style.RESET_ALL)
         print(Fore.CYAN + "=" * width + Style.RESET_ALL)
         print()
-        print(f"{Fore.YELLOW}Donations accepted but not required{Style.RESET_ALL}")
+        print(f"{Fore.YELLOW}Please consider donating to support the development of this tool:{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}I'll probably just buy a vape or something{Style.RESET_ALL}")
+        print()
         print(f"{Fore.CYAN}CGUDnm2vjTthuuxdYv7wJG6r9akxq8ascgsCXB7Dvgjz{Style.RESET_ALL}")
         print()
 
