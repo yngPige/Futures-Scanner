@@ -2826,3 +2826,19 @@ weighted avg       0.78      0.78      0.78        59
 2025-04-13 15:12:24,459 - __main__ - INFO - Testing Terminal UI with toggle indicators
 2025-04-13 15:18:24,686 - __main__ - INFO - Testing Terminal UI with toggle indicators
 2025-04-13 15:22:56,027 - __main__ - INFO - Testing Terminal UI with toggle indicators only at the bottom
+2025-04-13 15:48:07,708 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-13 15:48:07,712 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-13 15:48:09,036 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-13 15:48:09,040 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250413_154809.csv
+2025-04-13 15:48:09,043 - main - INFO - Performing technical analysis
+2025-04-13 15:48:09,043 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-13 15:48:09,052 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-13 15:48:09,095 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-13 15:48:09,118 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-13 15:48:09,121 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-13 15:48:09,121 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-13 15:48:09,133 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-13 15:48:09,150 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250413_154809.csv
+2025-04-13 15:48:09,150 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250413_154809.csv
+2025-04-13 15:48:12,333 - src.analysis.local_llm - INFO - Loading model from C:\Users\Administrator\.cache\futures_scanner\models\llama-3-8b-instruct.Q4_K_M.gguf
+2025-04-13 15:48:12,343 - src.analysis.local_llm - ERROR - Error loading model: Failed to load model from file: C:\Users\Administrator\.cache\futures_scanner\models\llama-3-8b-instruct.Q4_K_M.gguf
