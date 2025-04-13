@@ -11,6 +11,8 @@ import logging
 import tempfile
 import platform
 import re
+import sys
+import subprocess
 from datetime import datetime
 from pathlib import Path
 import numpy as np
@@ -26,6 +28,70 @@ logger = logging.getLogger(__name__)
 DEFAULT_MODEL_PATH = os.path.join(os.path.expanduser("~"), ".cache", "futures_scanner", "models")
 DEFAULT_MODEL_NAME = "llama-3-8b-instruct.Q4_K_M.gguf"
 DEFAULT_MODEL_URL = "https://huggingface.co/TheBloke/Llama-3-8B-Instruct-GGUF/resolve/main/llama-3-8b-instruct.Q4_K_M.gguf"
+
+# Required dependencies
+REQUIRED_PACKAGES = {
+    "llama-cpp-python": "llama_cpp",
+    "huggingface-hub": "huggingface_hub",
+    "requests": "requests",
+    "tqdm": "tqdm"
+}
+
+def check_dependencies():
+    """
+    Check if all required dependencies are installed.
+
+    Returns:
+        tuple: (all_installed, missing_packages)
+            - all_installed (bool): True if all dependencies are installed
+            - missing_packages (list): List of missing package names
+    """
+    missing_packages = []
+
+    for package_name, import_name in REQUIRED_PACKAGES.items():
+        try:
+            __import__(import_name)
+        except ImportError:
+            missing_packages.append(package_name)
+
+    return len(missing_packages) == 0, missing_packages
+
+def install_dependencies(missing_packages=None):
+    """
+    Install missing dependencies.
+
+    Args:
+        missing_packages (list, optional): List of package names to install.
+            If None, will check and install all required packages.
+
+    Returns:
+        bool: True if installation was successful, False otherwise
+    """
+    if missing_packages is None:
+        _, missing_packages = check_dependencies()
+
+    if not missing_packages:
+        logger.info("All required dependencies are already installed.")
+        return True
+
+    logger.info(f"Installing missing dependencies: {', '.join(missing_packages)}")
+
+    try:
+        # Use subprocess to run pip install
+        cmd = [sys.executable, "-m", "pip", "install"] + missing_packages
+        logger.info(f"Running: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            logger.info("Successfully installed all dependencies.")
+            return True
+        else:
+            logger.error(f"Failed to install dependencies: {result.stderr}")
+            return False
+    except Exception as e:
+        logger.error(f"Error installing dependencies: {str(e)}")
+        return False
 
 class LocalLLMAnalyzer:
     """Class to perform LLM-based analysis on cryptocurrency data using local models."""
@@ -54,6 +120,14 @@ class LocalLLMAnalyzer:
 
     def _initialize_model(self):
         """Initialize the LLM model."""
+        # Check for required dependencies first
+        all_installed, missing_packages = check_dependencies()
+        if not all_installed:
+            logger.warning(f"Missing required dependencies: {', '.join(missing_packages)}")
+            logger.info("LLM functionality requires additional packages.")
+            self.llm = None
+            return
+
         try:
             # Import here to avoid dependency issues if not using this module
             from llama_cpp import Llama
@@ -61,17 +135,37 @@ class LocalLLMAnalyzer:
             # Check if model file exists, if not download it
             model_file_path = self._get_model_file_path()
             if not os.path.exists(model_file_path):
-                self._download_model(model_file_path)
+                download_success = self._download_model(model_file_path)
+                if not download_success:
+                    logger.error("Failed to download model. Cannot proceed with LLM analysis.")
+                    self.llm = None
+                    return
 
             # Load the model
             logger.info(f"Loading model from {model_file_path}")
-            self.llm = Llama(
-                model_path=model_file_path,
-                n_ctx=self.n_ctx,
-                n_gpu_layers=self.n_gpu_layers,
-                verbose=False
-            )
-            logger.info("Model loaded successfully")
+
+            # Check if the file exists and has content
+            if not os.path.exists(model_file_path):
+                logger.error(f"Model file not found: {model_file_path}")
+                self.llm = None
+                return
+
+            if os.path.getsize(model_file_path) == 0:
+                logger.error(f"Model file is empty: {model_file_path}")
+                self.llm = None
+                return
+
+            try:
+                self.llm = Llama(
+                    model_path=model_file_path,
+                    n_ctx=self.n_ctx,
+                    n_gpu_layers=self.n_gpu_layers,
+                    verbose=False
+                )
+                logger.info("Model loaded successfully")
+            except Exception as e:
+                logger.error(f"Error loading model: {e}")
+                self.llm = None
 
         except ImportError as e:
             logger.error(f"Failed to import llama_cpp: {e}")
@@ -82,7 +176,19 @@ class LocalLLMAnalyzer:
             self.llm = None
 
     def _get_model_file_path(self):
-        """Get the full path to the model file."""
+        """Get the full path to the model file.
+
+        Returns:
+            str: Full path to the model file
+        """
+        # Get the model info from AVAILABLE_MODELS if possible
+        for model_key, model_info in AVAILABLE_MODELS.items():
+            if model_info.get('name') == self.model_name or model_key == self.model_name:
+                # Use the name from the model info
+                model_filename = model_info.get('name')
+                return os.path.join(self.model_path, model_filename)
+
+        # Fallback to just using the model name directly
         return os.path.join(self.model_path, self.model_name)
 
     def _download_model(self, model_file_path):
@@ -93,62 +199,67 @@ class LocalLLMAnalyzer:
             model_file_path (str): Path where the model should be saved
         """
         try:
-            from huggingface_hub import hf_hub_download
+            # Find the model URL from AVAILABLE_MODELS
+            model_url = None
+            model_size = None
+            model_key = None
+
+            # Try to find the model in AVAILABLE_MODELS
+            for key, info in AVAILABLE_MODELS.items():
+                if info.get('name') == self.model_name or key == self.model_name:
+                    model_url = info.get('url')
+                    model_size = info.get('size_gb')
+                    model_key = key
+                    break
+
+            if model_url is None:
+                # Fallback to default URL if model not found
+                model_url = DEFAULT_MODEL_URL
+                model_size = 4.37  # Default size for Llama 3 8B
+                model_key = "llama3-8b"
 
             logger.info(f"Model not found at {model_file_path}")
-            logger.info(f"Downloading model {self.model_name}...")
+            logger.info(f"Downloading model {model_key} ({model_size} GB)...")
 
-            # For standard models, try to download from HuggingFace
-            if self.model_name == DEFAULT_MODEL_NAME:
-                import requests
-                from tqdm import tqdm
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(model_file_path), exist_ok=True)
 
-                # Create directory if it doesn't exist
-                os.makedirs(os.path.dirname(model_file_path), exist_ok=True)
+            # Import required modules
+            import requests
+            from tqdm import tqdm
 
-                # Download with progress bar
-                response = requests.get(DEFAULT_MODEL_URL, stream=True)
-                total_size = int(response.headers.get('content-length', 0))
+            # Download with progress bar
+            response = requests.get(model_url, stream=True)
+            total_size = int(response.headers.get('content-length', 0))
 
-                with open(model_file_path, 'wb') as f, tqdm(
-                    desc=self.model_name,
-                    total=total_size,
-                    unit='iB',
-                    unit_scale=True,
-                    unit_divisor=1024,
-                ) as bar:
-                    for data in response.iter_content(chunk_size=1024*1024):
-                        size = f.write(data)
-                        bar.update(size)
+            with open(model_file_path, 'wb') as f, tqdm(
+                desc=self.model_name,
+                total=total_size,
+                unit='iB',
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as bar:
+                for data in response.iter_content(chunk_size=1024*1024):
+                    size = f.write(data)
+                    bar.update(size)
 
-                logger.info(f"Model downloaded to {model_file_path}")
+            logger.info(f"Model downloaded to {model_file_path}")
+
+            # Verify the file was downloaded correctly
+            if os.path.exists(model_file_path) and os.path.getsize(model_file_path) > 0:
+                logger.info(f"Successfully downloaded model: {model_file_path}")
+                return True
             else:
-                # For other models, try to download from HuggingFace
-                logger.info("Attempting to download from HuggingFace...")
+                logger.error(f"Downloaded file is empty or does not exist: {model_file_path}")
+                return False
 
-                # Try to parse model name to get repo_id and filename
-                if "/" in self.model_name:
-                    repo_id, filename = self.model_name.split("/", 1)
-                else:
-                    # Default to TheBloke's repository
-                    repo_id = "TheBloke/Llama-3-8B-Instruct-GGUF"
-                    filename = self.model_name
-
-                # Download the model
-                hf_hub_download(
-                    repo_id=repo_id,
-                    filename=filename,
-                    local_dir=self.model_path,
-                    local_dir_use_symlinks=False
-                )
-                logger.info(f"Model downloaded to {model_file_path}")
-
-        except ImportError:
-            logger.error("Failed to import huggingface_hub. Please install it: pip install huggingface_hub")
-            raise
+        except ImportError as e:
+            logger.error(f"Failed to import required module: {e}")
+            logger.info("Please run: pip install requests tqdm huggingface-hub")
+            return False
         except Exception as e:
             logger.error(f"Error downloading model: {e}")
-            raise
+            return False
 
     def _prepare_market_data(self, df):
         """
@@ -572,25 +683,89 @@ AVAILABLE_MODELS = {
         "name": "llama-3-8b-instruct.Q4_K_M.gguf",
         "description": "Llama 3 8B Instruct (Quantized 4-bit)",
         "url": "https://huggingface.co/TheBloke/Llama-3-8B-Instruct-GGUF/resolve/main/llama-3-8b-instruct.Q4_K_M.gguf",
-        "size_gb": 4.37
+        "size_gb": 4.37,
+        "details": "General-purpose LLM with good performance across various tasks. Balanced between size and capability.",
+        "trading_focus": "Low",
+        "hardware_req": "8GB+ VRAM GPU recommended, can run on CPU",
+        "strengths": "Versatile, good instruction following, reasonable size",
+        "weaknesses": "Not specialized for financial analysis"
     },
     "llama3-70b": {
         "name": "llama-3-70b-instruct.Q4_K_M.gguf",
         "description": "Llama 3 70B Instruct (Quantized 4-bit)",
         "url": "https://huggingface.co/TheBloke/Llama-3-70B-Instruct-GGUF/resolve/main/llama-3-70b-instruct.Q4_K_M.gguf",
-        "size_gb": 38.2
+        "size_gb": 38.2,
+        "details": "Largest Llama 3 model with superior reasoning and knowledge. Requires significant hardware resources.",
+        "trading_focus": "Medium",
+        "hardware_req": "24GB+ VRAM GPU required, preferably 40GB+",
+        "strengths": "Excellent reasoning, deep knowledge, high accuracy",
+        "weaknesses": "Very large model size, slow inference, high resource requirements"
     },
     "mistral-7b": {
         "name": "mistral-7b-instruct-v0.2.Q4_K_M.gguf",
         "description": "Mistral 7B Instruct v0.2 (Quantized 4-bit)",
         "url": "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-        "size_gb": 3.83
+        "size_gb": 3.83,
+        "details": "Efficient model with strong performance for its size. Good balance of capabilities and resource requirements.",
+        "trading_focus": "Medium",
+        "hardware_req": "6GB+ VRAM GPU recommended, can run on CPU",
+        "strengths": "Efficient, good reasoning, smaller size",
+        "weaknesses": "Less powerful than larger models for complex analysis"
     },
     "phi3-mini": {
         "name": "phi-3-mini-4k-instruct.Q4_K_M.gguf",
         "description": "Phi-3 Mini 4K Instruct (Quantized 4-bit)",
         "url": "https://huggingface.co/TheBloke/phi-3-mini-4k-instruct-GGUF/resolve/main/phi-3-mini-4k-instruct.Q4_K_M.gguf",
-        "size_gb": 1.91
+        "size_gb": 1.91,
+        "details": "Microsoft's compact but powerful model. Excellent performance for its small size.",
+        "trading_focus": "Medium",
+        "hardware_req": "4GB+ VRAM GPU or modern CPU",
+        "strengths": "Very small size, fast inference, runs on modest hardware",
+        "weaknesses": "Limited context window, less powerful than larger models"
+    },
+    "fingpt-forecaster": {
+        "name": "fingpt-forecaster_dow30_llama2-7b_lora.Q4_K_M.gguf",
+        "description": "FinGPT Forecaster - Trading recommendations with entry/exit points",
+        "url": "https://huggingface.co/FinGPT/fingpt-forecaster_dow30_llama2-7b_lora/resolve/main/fingpt-forecaster_dow30_llama2-7b_lora.Q4_K_M.gguf",
+        "size_gb": 4.2,
+        "details": "Specialized financial model fine-tuned for stock price forecasting and trading recommendations. Based on Llama2-7B.",
+        "trading_focus": "Very High",
+        "hardware_req": "8GB+ VRAM GPU recommended",
+        "strengths": "Provides specific entry/exit points with stoploss and take profit levels, trained on financial data",
+        "weaknesses": "Based on older Llama2 architecture, more specialized and less versatile for general tasks"
+    },
+    "hermes-llama3-financial": {
+        "name": "hermes-2-theta-llama-3-8b.Q4_K_M.gguf",
+        "description": "Hermes Llama 3 - Financial analysis and trading recommendations",
+        "url": "https://huggingface.co/NousResearch/Hermes-2-Theta-Llama-3-8B-GGUF/resolve/main/hermes-2-theta-llama-3-8b.Q4_K_M.gguf",
+        "size_gb": 4.8,
+        "details": "Llama 3 8B model fine-tuned for financial analysis and trading. Strong performance on financial data analysis.",
+        "trading_focus": "High",
+        "hardware_req": "8GB+ VRAM GPU recommended",
+        "strengths": "Good at interpreting price action patterns, provides trading recommendations based on technical analysis",
+        "weaknesses": "Larger file size than standard Llama 3 8B, less specialized than FinGPT"
+    },
+    "phi3-mini-financial": {
+        "name": "phi-3-mini-128k-instruct.Q4_K_M.gguf",
+        "description": "Phi-3 Mini - Efficient model for financial analysis",
+        "url": "https://huggingface.co/TheBloke/Phi-3-mini-128k-instruct-GGUF/resolve/main/phi-3-mini-128k-instruct.Q4_K_M.gguf",
+        "size_gb": 2.7,
+        "details": "Microsoft's Phi-3 mini model with extended context window. Excellent performance despite smaller size.",
+        "trading_focus": "Medium",
+        "hardware_req": "4GB+ VRAM GPU or modern CPU",
+        "strengths": "Very efficient for deployment on consumer hardware, good at pattern recognition in financial data",
+        "weaknesses": "Less powerful than larger models for complex analysis"
+    },
+    "mistral-financial": {
+        "name": "mistral-7b-instruct-v0.2-finance.Q4_K_M.gguf",
+        "description": "Mistral 7B - Financial fine-tuned version",
+        "url": "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+        "size_gb": 3.9,
+        "details": "Mistral 7B model fine-tuned on financial data. Strong performance on financial sentiment analysis.",
+        "trading_focus": "High",
+        "hardware_req": "8GB+ VRAM GPU recommended",
+        "strengths": "Good at interpreting market trends and price action, efficient deployment on consumer hardware",
+        "weaknesses": "Less specialized than FinGPT for specific trading recommendations"
     }
 }
 

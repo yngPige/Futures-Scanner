@@ -75,7 +75,8 @@ def parse_arguments():
     parser.add_argument('--use-llm', action='store_true',
                         help='Use LLM for analysis')
     parser.add_argument('--llm-model', type=str, default='llama3-8b',
-                        choices=['llama3-8b', 'llama3-70b', 'mistral-7b', 'phi3-mini'],
+                        choices=['llama3-8b', 'llama3-70b', 'mistral-7b', 'phi3-mini',
+                                 'fingpt-forecaster', 'hermes-llama3-financial', 'phi3-mini-financial', 'mistral-financial'],
                         help='LLM model to use')
     parser.add_argument('--use-gpu', action='store_true',
                         help='Use GPU for LLM inference')

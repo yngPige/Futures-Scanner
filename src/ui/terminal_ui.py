@@ -9,7 +9,7 @@ import time
 import logging
 import argparse
 from datetime import datetime
-from colorama import init, Fore, Style
+from colorama import init, Fore, Back, Style
 from src.ui.terminal_output import TerminalOutputGenerator
 
 # Initialize colorama
@@ -51,6 +51,16 @@ class TerminalUI:
             'use_llm': False,
             'llm_model': 'llama3-8b',
             'use_gpu': False
+        }
+
+        # Track completed functions
+        self.completed_functions = {
+            'fetch_data': False,
+            'analyze_data': False,
+            'train_model': False,
+            'make_predictions': False,
+            'backtest_strategy': False,
+            'llm_analysis': False
         }
 
         # Create terminal output generator
@@ -164,8 +174,9 @@ class TerminalUI:
             width (int): Width of the loading bar
             log_messages (list, optional): List of log messages to display during animation
         """
-        # Store logs to display at the end
-        self.collected_logs = []
+        # Initialize collected_logs if it doesn't exist
+        if not hasattr(self, 'collected_logs'):
+            self.collected_logs = []
 
         # Print header with message
         print(f"\n{Fore.CYAN}⚡ {message} ⚡{Style.RESET_ALL}")
@@ -189,6 +200,15 @@ class TerminalUI:
                 "Finalizing results..."
             ]
 
+        # Create a list to store displayed logs for this animation
+        displayed_logs = []
+        log_display_height = 5  # Number of log lines to show at once
+        log_display_area = [''] * log_display_height
+
+        # Print initial empty lines for the log display area
+        for _ in range(log_display_height):
+            print()
+
         # Show loading bar animation with logs
         for i in range(steps + 1):
             # Calculate progress percentage
@@ -198,49 +218,91 @@ class TerminalUI:
             filled_blocks = i * width // steps
             empty_blocks = width - filled_blocks
 
-            # Choose colors based on progress
-            if percent < 30:
-                color = Fore.RED
-            elif percent < 60:
-                color = Fore.YELLOW
-            else:
-                color = Fore.GREEN
+            # Create a gradient effect for the loading bar
+            gradient_bar = ''
+            for j in range(filled_blocks):
+                # Calculate position in the gradient (0 to 1)
+                pos = j / width if width > 0 else 0
 
-            # Create the loading bar
-            bar = f"[{color}{'█' * filled_blocks}{Style.RESET_ALL}{' ' * empty_blocks}] {percent}%"
+                # Create a smooth color transition from red to yellow to green
+                if pos < 0.3:
+                    # Red to Yellow transition
+                    color = Fore.RED
+                elif pos < 0.6:
+                    # Yellow to Green transition
+                    color = Fore.YELLOW
+                else:
+                    # Green
+                    color = Fore.GREEN
 
-            # Print the loading bar (overwrite the previous one)
-            print(bar, end='\r')
+                gradient_bar += color + '█' + Style.RESET_ALL
+
+            # Create the loading bar with semi-transparent background
+            bar_bg = Fore.BLACK + Back.WHITE
+            progress_text = f" {percent}% "
+            bar = f"{bar_bg}[{Style.RESET_ALL}{gradient_bar}{' ' * empty_blocks}{bar_bg}]{Style.RESET_ALL} {progress_text}"
 
             # Display a log message at certain intervals
             if i > 0 and i % (steps // (len(log_messages) - 1) or 1) == 0 and log_messages:
                 log_idx = min(i // (steps // (len(log_messages) - 1) or 1), len(log_messages) - 1)
                 log_msg = log_messages[log_idx]
 
-                # Choose a random color for the log message
-                log_colors = [Fore.CYAN, Fore.MAGENTA, Fore.BLUE, Fore.GREEN, Fore.YELLOW]
-                log_color = log_colors[log_idx % len(log_colors)]
+                # Choose a color for the log message based on content
+                if "error" in log_msg.lower() or "failed" in log_msg.lower():
+                    log_color = Fore.RED
+                elif "warning" in log_msg.lower():
+                    log_color = Fore.YELLOW
+                elif "completed" in log_msg.lower() or "success" in log_msg.lower():
+                    log_color = Fore.GREEN
+                else:
+                    # Cycle through colors for regular messages
+                    log_colors = [Fore.CYAN, Fore.MAGENTA, Fore.BLUE, Fore.GREEN, Fore.YELLOW]
+                    log_color = log_colors[log_idx % len(log_colors)]
 
                 # Format timestamp
                 timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
-                # Print log message below the loading bar
-                print(f"\r{' ' * (width + 10)}\r{log_color}[{timestamp}] {log_msg}{Style.RESET_ALL}")
+                # Create formatted log message
+                formatted_log = f"{Fore.WHITE}[{timestamp}]{Style.RESET_ALL} {log_color}{log_msg}{Style.RESET_ALL}"
+
+                # Add to displayed logs and update the log display area
+                displayed_logs.append(formatted_log)
+                log_display_area = displayed_logs[-log_display_height:] if len(displayed_logs) >= log_display_height else displayed_logs + [''] * (log_display_height - len(displayed_logs))
 
                 # Store log for final display
                 self.collected_logs.append((timestamp, log_msg))
 
-                # Redraw the loading bar
-                print(bar, end='\r')
+            # Move cursor back up to the loading bar position (log_display_height + 1 lines up)
+            print(f"\033[{log_display_height + 1}A", end='\r')
+
+            # Print the loading bar
+            print(f"\r{bar}\033[K")
+
+            # Print the log display area with a semi-transparent overlay effect
+            for log_line in log_display_area:
+                # Add a subtle background to make logs appear behind a semi-transparent overlay
+                if log_line:
+                    print(f"\r{Back.BLACK}{Fore.WHITE}{log_line}{Style.RESET_ALL}\033[K")
+                else:
+                    print("\r\033[K")
 
             # Sleep for a short time
             time.sleep(sleep_time)
 
-        # Print a newline and completion message after the animation completes
-        print(f"\r{' ' * (width + 10)}\r{Fore.GREEN}[{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] ✓ {message} completed!{Style.RESET_ALL}")
+        # Move cursor back up to the loading bar position
+        print(f"\033[{log_display_height + 1}A", end='\r')
+
+        # Print completion message
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        completion_msg = f"{Fore.GREEN}[{timestamp}] ✓ {message} completed!{Style.RESET_ALL}"
+        print(f"\r{completion_msg}\033[K")
 
         # Add completion log
-        self.collected_logs.append((datetime.now().strftime("%H:%M:%S.%f")[:-3], f"✓ {message} completed!"))
+        self.collected_logs.append((timestamp, f"✓ {message} completed!"))
+
+        # Clear the log display area
+        for _ in range(log_display_height):
+            print("\r\033[K")
 
     def print_menu_with_settings(self, menu_items, title=None):
         """Print a menu with settings side by side.
@@ -284,7 +346,23 @@ class TerminalUI:
             # Add menu item if available
             if i < menu_count:
                 key, desc = menu_items[i]
-                menu_str = f"{Fore.GREEN}{key}{Style.RESET_ALL}: {desc}"
+
+                # Check if this menu item corresponds to a function that has been completed
+                check_mark = ""
+                if desc == "Fetch Data" and self.completed_functions.get('fetch_data'):
+                    check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
+                elif desc == "Analyze Data" and self.completed_functions.get('analyze_data'):
+                    check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
+                elif desc == "Train Model" and self.completed_functions.get('train_model'):
+                    check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
+                elif desc == "Make Predictions" and self.completed_functions.get('make_predictions'):
+                    check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
+                elif desc == "Backtest Strategy" and self.completed_functions.get('backtest_strategy'):
+                    check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
+                elif desc == "LLM Analysis" and self.completed_functions.get('llm_analysis'):
+                    check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
+
+                menu_str = f"{Fore.GREEN}{key}{Style.RESET_ALL}: {desc}{check_mark}"
 
             # Add settings item if available
             if i < settings_count:
@@ -295,7 +373,7 @@ class TerminalUI:
                     settings_str = f"{Fore.YELLOW}{setting_key}:{Style.RESET_ALL} {setting_val}"
 
             # Print the line with proper spacing
-            print(f"{menu_str}{' ' * (max_menu_length - len(menu_str.replace(Fore.GREEN, '').replace(Style.RESET_ALL, '')))}  {settings_str}")
+            print(f"{menu_str}{' ' * (max_menu_length - len(menu_str.replace(Fore.GREEN, '').replace(Style.RESET_ALL, '').replace('✓', '')))}  {settings_str}")
 
         print()
 
@@ -310,6 +388,7 @@ class TerminalUI:
             ("6", "Run All Steps"),
             ("7", "LLM Analysis"),
             ("8", "Settings"),
+            ("c", "Clear Data"),
             ("h", "How to Use"),
             ("q", "Quit")
         ]
@@ -334,6 +413,8 @@ class TerminalUI:
             self.llm_analysis()
         elif choice == '8':
             self.current_menu = self.settings_menu
+        elif choice.lower() == 'c':
+            self.clear_data()
         elif choice.lower() == 'h':
             self.show_how_to_use()
         elif choice.lower() == 'q':
@@ -623,6 +704,350 @@ class TerminalUI:
 
         time.sleep(1)
 
+    def display_model_details(self, model_key, model_info):
+        """Display detailed information about a model."""
+        # Create a box for the model details
+        width = 80
+        print("\n" + "=" * width)
+        print(f"{Fore.CYAN}{model_key.upper()} MODEL DETAILS{Style.RESET_ALL}".center(width))
+        print("=" * width)
+
+        # Basic information
+        print(f"{Fore.YELLOW}Description:{Style.RESET_ALL} {model_info['description']}")
+        print(f"{Fore.YELLOW}File Size:{Style.RESET_ALL} {model_info['size_gb']:.2f} GB")
+        print(f"{Fore.YELLOW}File Name:{Style.RESET_ALL} {model_info['name']}")
+
+        # Detailed information
+        print("\n" + "-" * width)
+        print(f"{Fore.CYAN}DETAILED INFORMATION{Style.RESET_ALL}".center(width))
+        print("-" * width)
+        print(f"{Fore.YELLOW}Overview:{Style.RESET_ALL} {model_info['details']}")
+
+        # Trading focus
+        trading_focus = model_info.get('trading_focus', 'Unknown')
+        focus_color = Fore.GREEN if trading_focus in ['High', 'Very High'] else Fore.YELLOW if trading_focus == 'Medium' else Fore.RED
+        print(f"{Fore.YELLOW}Trading Focus:{Style.RESET_ALL} {focus_color}{trading_focus}{Style.RESET_ALL}")
+
+        # Hardware requirements
+        print(f"{Fore.YELLOW}Hardware Requirements:{Style.RESET_ALL} {model_info.get('hardware_req', 'Not specified')}")
+
+        # Strengths and weaknesses
+        print("\n" + "-" * width)
+        print(f"{Fore.CYAN}STRENGTHS & WEAKNESSES{Style.RESET_ALL}".center(width))
+        print("-" * width)
+        print(f"{Fore.GREEN}Strengths:{Style.RESET_ALL} {model_info.get('strengths', 'Not specified')}")
+        print(f"{Fore.RED}Weaknesses:{Style.RESET_ALL} {model_info.get('weaknesses', 'Not specified')}")
+
+        print("=" * width)
+
+    def show_spinner_animation(self, message, callback_func, *args, **kwargs):
+        """Show a spinner animation while executing a callback function.
+
+        Args:
+            message (str): Message to display with the spinner
+            callback_func (callable): Function to execute while showing the spinner
+            *args: Arguments to pass to the callback function
+            **kwargs: Keyword arguments to pass to the callback function
+
+        Returns:
+            Any: The return value of the callback function
+        """
+        # Spinner characters
+        spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+        # Colors for the spinner
+        colors = [Fore.CYAN, Fore.BLUE, Fore.GREEN, Fore.YELLOW, Fore.RED, Fore.MAGENTA]
+
+        # Clear the screen and print header
+        self.clear_screen()
+        self.print_header("3lacks Scanner - LLM Download")
+
+        # Print initial message
+        print(f"\n{Fore.CYAN}{message}{Style.RESET_ALL}\n")
+
+        # Start the spinner in a separate thread
+        import threading
+        import time
+
+        # Flag to control the spinner
+        running = True
+        result = None
+        error = None
+
+        # Function to run the callback in a separate thread
+        def run_callback():
+            nonlocal result, error, running
+            try:
+                result = callback_func(*args, **kwargs)
+            except Exception as e:
+                error = e
+            finally:
+                running = False
+
+        # Start the callback thread
+        callback_thread = threading.Thread(target=run_callback)
+        callback_thread.daemon = True
+        callback_thread.start()
+
+        # Show the spinner while the callback is running
+        i = 0
+        progress_chars = [' '] * 20  # For the progress trail effect
+        progress_pos = 0
+
+        try:
+            while running:
+                # Get the current spinner character and color
+                spinner = spinner_chars[i % len(spinner_chars)]
+                color = colors[i % len(colors)]
+
+                # Update progress trail
+                progress_chars[progress_pos] = '·'
+                progress_pos = (progress_pos + 1) % len(progress_chars)
+                progress_chars[progress_pos] = '○'
+                progress_trail = ''.join(progress_chars)
+
+                # Print the spinner and message
+                print(f"\r{color}{spinner}{Style.RESET_ALL} {message} {Fore.CYAN}{progress_trail}{Style.RESET_ALL}", end='')
+
+                # Sleep briefly
+                time.sleep(0.1)
+                i += 1
+
+                # Every 10 iterations, update the progress trail
+                if i % 10 == 0:
+                    for j in range(len(progress_chars)):
+                        if progress_chars[j] == '·':
+                            progress_chars[j] = ' '
+        finally:
+            # Clear the spinner line
+            print("\r" + " " * 100, end="\r")
+
+            # If there was an error, raise it
+            if error:
+                raise error
+
+            # Return the result
+            return result
+
+    def check_llm_dependencies(self):
+        """Check if all required LLM dependencies are installed and offer to install them if missing.
+
+        Returns:
+            bool: True if all dependencies are installed or successfully installed, False otherwise
+        """
+        try:
+            from src.analysis.local_llm import check_dependencies, install_dependencies, REQUIRED_PACKAGES
+
+            all_installed, missing_packages = check_dependencies()
+            if all_installed:
+                return True
+
+            # Show missing dependencies
+            self.print_header("Missing Dependencies")
+            self.print_warning(f"The following required packages are missing: {', '.join(missing_packages)}")
+            self.print_info("These packages are required for LLM functionality.")
+
+            # Ask to install
+            install = self.get_input("\nWould you like to install these packages now? (y/n): ")
+            if install.lower() != 'y':
+                self.print_info("Dependencies not installed. LLM functionality will be limited.")
+                return False
+
+            # Show installation progress
+            self.print_info("Installing dependencies...")
+
+            # Show loading animation for installation
+            install_logs = [
+                "Checking package versions...",
+                "Resolving dependencies...",
+                "Downloading packages...",
+                "Installing packages...",
+                "Building wheels...",
+                "Verifying installations...",
+                "Cleaning up...",
+                "Finalizing installation..."
+            ]
+            self.show_loading_animation("Installing required packages", duration=3, log_messages=install_logs)
+
+            # Actually install the dependencies
+            success = install_dependencies(missing_packages)
+
+            if success:
+                self.print_success("Successfully installed all required dependencies!")
+                return True
+            else:
+                self.print_error("Failed to install dependencies. Please install them manually:")
+                self.print_info(f"pip install {' '.join(missing_packages)}")
+                return False
+
+        except Exception as e:
+            self.print_error(f"Error checking dependencies: {str(e)}")
+            return False
+
+    def download_llm_model(self, model_key):
+        """Download an LLM model.
+
+        Args:
+            model_key (str): The key of the model to download
+
+        Returns:
+            bool: True if download was successful, False otherwise
+        """
+        # First check dependencies
+        if not self.check_llm_dependencies():
+            self.print_warning("Cannot download model without required dependencies.")
+            return False
+
+        try:
+            from src.analysis.local_llm import AVAILABLE_MODELS, DEFAULT_MODEL_PATH
+            import os
+            import requests
+            import threading
+            import time
+            from tqdm import tqdm
+            from huggingface_hub import hf_hub_download
+
+            # Get model info
+            if model_key not in AVAILABLE_MODELS:
+                self.print_error(f"Unknown model: {model_key}")
+                return False
+
+            model_info = AVAILABLE_MODELS[model_key]
+            model_name = model_info.get('name')
+            model_url = model_info.get('url')
+            model_size = model_info.get('size_gb', 0)
+
+            # Create model directory if it doesn't exist
+            model_dir = DEFAULT_MODEL_PATH
+            os.makedirs(model_dir, exist_ok=True)
+
+            # Full path to save the model
+            model_file_path = os.path.join(model_dir, model_name)
+
+            # Check if model already exists
+            if os.path.exists(model_file_path):
+                self.print_info(f"Model already exists at {model_file_path}")
+                return True
+
+            # Show download information
+            self.print_header(f"Downloading {model_key}")
+            self.print_info(f"Model: {model_name}")
+            self.print_info(f"Size: {model_size:.2f} GB")
+            self.print_info(f"Destination: {model_file_path}")
+            self.print_info("This may take a while depending on your internet connection...")
+
+            # Ask for confirmation
+            confirm = self.get_input(f"\nStart download? (y/n): ")
+            if confirm.lower() != 'y':
+                self.print_info("Download cancelled.")
+                return False
+
+            # Variables to track download progress
+            download_complete = False
+            download_success = False
+            download_error = None
+            download_progress = 0
+            total_size = 0
+
+            # Function to perform the actual download
+            def perform_download():
+                nonlocal download_complete, download_success, download_error, download_progress, total_size
+                try:
+                    if model_url:
+                        # Direct download with progress tracking
+                        response = requests.get(model_url, stream=True)
+                        total_size = int(response.headers.get('content-length', 0))
+                        downloaded_size = 0
+
+                        with open(model_file_path, 'wb') as f:
+                            for data in response.iter_content(chunk_size=1024*1024):
+                                if data:
+                                    f.write(data)
+                                    downloaded_size += len(data)
+                                    download_progress = (downloaded_size / total_size) * 100 if total_size > 0 else 0
+                    else:
+                        # Download from HuggingFace
+                        # Try to parse model name to get repo_id and filename
+                        if "/" in model_name:
+                            repo_id, filename = model_name.split("/", 1)
+                        else:
+                            # Default to TheBloke's repository
+                            repo_id = "TheBloke/Llama-3-8B-Instruct-GGUF"
+                            filename = model_name
+
+                        # Download the model
+                        hf_hub_download(
+                            repo_id=repo_id,
+                            filename=filename,
+                            local_dir=model_dir,
+                            local_dir_use_symlinks=False
+                        )
+
+                    download_success = True
+                except Exception as e:
+                    download_error = str(e)
+                    # Try to remove partially downloaded file
+                    if os.path.exists(model_file_path):
+                        try:
+                            os.remove(model_file_path)
+                        except:
+                            pass
+                finally:
+                    download_complete = True
+
+            # Start the download in a separate thread
+            download_thread = threading.Thread(target=perform_download)
+            download_thread.daemon = True
+            download_thread.start()
+
+            # Show spinner animation while downloading
+            spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+            colors = [Fore.CYAN, Fore.BLUE, Fore.GREEN, Fore.YELLOW, Fore.MAGENTA]
+            i = 0
+
+            # Clear screen and show download header
+            self.clear_screen()
+            self.print_header(f"Downloading {model_key}")
+            print(f"\n{Fore.CYAN}Model:{Style.RESET_ALL} {model_name}")
+            print(f"{Fore.CYAN}Size:{Style.RESET_ALL} {model_size:.2f} GB")
+            print(f"{Fore.CYAN}Destination:{Style.RESET_ALL} {model_file_path}\n")
+
+            # Show spinner while downloading
+            while not download_complete:
+                spinner = spinner_chars[i % len(spinner_chars)]
+                color = colors[i % len(colors)]
+
+                # Calculate progress bar
+                if model_url and total_size > 0:
+                    bar_width = 40
+                    filled_width = int(download_progress / 100 * bar_width)
+                    bar = f"[{Fore.GREEN}{'█' * filled_width}{Style.RESET_ALL}{' ' * (bar_width - filled_width)}] {download_progress:.1f}%"
+                    status = f"{color}{spinner}{Style.RESET_ALL} Downloading LLM model... {bar}"
+                else:
+                    status = f"{color}{spinner}{Style.RESET_ALL} Downloading LLM model..."
+
+                print(f"\r{status}", end='')
+                time.sleep(0.1)
+                i += 1
+
+            # Clear the spinner line
+            print("\r" + " " * 100)
+
+            # Check download result
+            if download_success:
+                self.print_success(f"Model downloaded successfully to {model_file_path}")
+                return True
+            else:
+                self.print_error(f"Error downloading model: {download_error}")
+                return False
+
+        except ImportError as e:
+            self.print_error(f"Missing dependencies: {str(e)}")
+            self.print_info("Please install required packages: pip install huggingface-hub tqdm requests")
+            return False
+        except Exception as e:
+            self.print_error(f"Error: {str(e)}")
+            return False
+
     def change_llm_model(self):
         """Change the LLM model setting."""
         self.print_header("Change LLM Model")
@@ -634,27 +1059,94 @@ class TerminalUI:
             # Available LLM models
             available_models = list(AVAILABLE_MODELS.keys())
 
-            print("Available LLM models:")
-            for i, model_key in enumerate(available_models, 1):
+            # Group models by trading focus
+            trading_focused = []
+            general_purpose = []
+            for model_key in available_models:
+                model_info = AVAILABLE_MODELS[model_key]
+                trading_focus = model_info.get('trading_focus', 'Low')
+                if trading_focus in ['High', 'Very High']:
+                    trading_focused.append(model_key)
+                else:
+                    general_purpose.append(model_key)
+
+            # Display trading-focused models first
+            print(f"{Fore.CYAN}Trading-Focused Models:{Style.RESET_ALL}")
+            for i, model_key in enumerate(trading_focused, 1):
+                model_info = AVAILABLE_MODELS[model_key]
+                focus = model_info.get('trading_focus', '')
+                focus_color = Fore.GREEN if focus == 'Very High' else Fore.YELLOW
+                print(f"{i}. {model_key} - {model_info['description']} ({model_info['size_gb']:.2f} GB) {focus_color}[{focus} Trading Focus]{Style.RESET_ALL}")
+
+            # Display general-purpose models
+            print(f"\n{Fore.CYAN}General-Purpose Models:{Style.RESET_ALL}")
+            for i, model_key in enumerate(general_purpose, len(trading_focused) + 1):
                 model_info = AVAILABLE_MODELS[model_key]
                 print(f"{i}. {model_key} - {model_info['description']} ({model_info['size_gb']:.2f} GB)")
 
-            print(f"\nCurrent LLM model: {self.settings['llm_model']}")
+            # Combine lists for selection
+            all_models = trading_focused + general_purpose
 
-            choice = self.get_input("\nEnter model number (or 'b' to go back): ")
+            print(f"\nCurrent LLM model: {Fore.YELLOW}{self.settings['llm_model']}{Style.RESET_ALL}")
+            print(f"\n{Fore.CYAN}Options:{Style.RESET_ALL}")
+            print(f"- Enter a model number to view details and select a model")
+            print(f"- Enter '{Fore.GREEN}d{Style.RESET_ALL}' to download a model")
+            print(f"- Enter '{Fore.GREEN}b{Style.RESET_ALL}' to go back")
+
+            choice = self.get_input("\nEnter your choice: ")
 
             if choice.lower() == 'b':
+                return
+            elif choice.lower() == 'd':
+                # Download a model
+                download_choice = self.get_input("Enter model number to download: ")
+                try:
+                    index = int(download_choice) - 1
+                    if 0 <= index < len(all_models):
+                        selected_model = all_models[index]
+                        self.download_llm_model(selected_model)
+                        self.wait_for_key()
+                    else:
+                        self.print_error("Invalid choice. Please try again.")
+                        time.sleep(1)
+                except ValueError:
+                    self.print_error("Invalid input. Please enter a number.")
+                    time.sleep(1)
                 return
 
             try:
                 index = int(choice) - 1
-                if 0 <= index < len(available_models):
-                    self.settings['llm_model'] = available_models[index]
-                    self.print_success(f"LLM model changed to {self.settings['llm_model']}.")
+                if 0 <= index < len(all_models):
+                    selected_model = all_models[index]
+                    model_info = AVAILABLE_MODELS[selected_model]
 
-                    # Show download information
-                    model_info = AVAILABLE_MODELS[self.settings['llm_model']]
-                    self.print_info(f"Note: This model will be downloaded ({model_info['size_gb']:.2f} GB) when first used.")
+                    # Display detailed information about the selected model
+                    self.display_model_details(selected_model, model_info)
+
+                    # Ask for confirmation
+                    confirm = self.get_input(f"\nDo you want to use the {Fore.YELLOW}{selected_model}{Style.RESET_ALL} model? (y/n): ")
+
+                    if confirm.lower() == 'y':
+                        self.settings['llm_model'] = selected_model
+                        self.print_success(f"LLM model changed to {self.settings['llm_model']}.")
+
+                        # Show download information
+                        self.print_info(f"Note: This model will be downloaded ({model_info['size_gb']:.2f} GB) when first used.")
+
+                        # Ask if user wants to download the model now
+                        download_now = self.get_input("Would you like to download this model now? (y/n): ")
+                        if download_now.lower() == 'y':
+                            self.download_llm_model(selected_model)
+
+                        # Show hardware requirements
+                        hardware_req = model_info.get('hardware_req', 'Not specified')
+                        self.print_info(f"Hardware Requirements: {hardware_req}")
+
+                        # Recommend GPU if appropriate
+                        if not self.settings['use_gpu'] and 'GPU' in hardware_req:
+                            self.print_warning("This model would benefit from GPU acceleration. Consider enabling it in settings.")
+                    else:
+                        self.print_info("Model selection cancelled.")
                 else:
                     self.print_error("Invalid choice. Please try again.")
             except ValueError:
@@ -702,6 +1194,8 @@ class TerminalUI:
                 self.print_success(f"Successfully fetched {len(df)} rows of data.")
                 self.print_info(f"Time range: {df.index.min()} to {df.index.max()}")
                 self.print_info(f"Latest price: {df['close'].iloc[-1]:.2f}")
+                # Mark this function as completed
+                self.completed_functions['fetch_data'] = True
             else:
                 self.print_error("Failed to fetch data.")
 
@@ -719,6 +1213,12 @@ class TerminalUI:
 
             args = self.build_command_args()
 
+            # Clear any previous logs
+            self.collected_logs = []
+
+            # Record operation start time
+            operation_start_time = datetime.now()
+
             self.print_info(f"Fetching data for {args.symbol} from {args.exchange}...")
 
             # Show loading animation while fetching data
@@ -727,6 +1227,9 @@ class TerminalUI:
             df = fetch_data(args)
 
             if df is not None:
+                # Mark fetch_data as completed
+                self.completed_functions['fetch_data'] = True
+
                 self.print_info("Performing technical analysis...")
 
                 # Show loading animation while analyzing data
@@ -736,6 +1239,8 @@ class TerminalUI:
 
                 if df_analyzed is not None and not df_analyzed.empty:
                     self.print_success(f"Successfully analyzed data with {len(df_analyzed.columns)} indicators.")
+                    # Mark analyze_data as completed
+                    self.completed_functions['analyze_data'] = True
 
                     # Show key indicators instead of sample data
                     latest = df_analyzed.iloc[-1]
@@ -769,8 +1274,8 @@ class TerminalUI:
                     # Show loading animation while preparing output
                     self.show_loading_animation("Preparing analysis report", duration=1.5)
 
-                    # Display the collected logs
-                    self.display_collected_logs(f"Analysis Process Log - {args.symbol}")
+                    # Display the collected logs for this operation only
+                    self.display_collected_logs(f"Analysis Process Log - {args.symbol}", operation_start_time)
 
                     # Display the analysis in the current terminal
                     if self.output_generator.display_in_current_terminal(
@@ -798,39 +1303,75 @@ class TerminalUI:
 
             args = self.build_command_args()
 
-            self.print_info(f"Fetching data for {args.symbol} from {args.exchange}...")
+            # Clear any previous logs
+            self.collected_logs = []
 
-            # Show loading animation while fetching data
-            self.show_loading_animation("Retrieving market data", duration=2)
+            # Fetch data with minimal output
+            self.print_info(f"Fetching data for {args.symbol}...")
+
+            # Define custom logs for data fetching
+            fetch_logs = [
+                "Connecting to exchange API...",
+                "Downloading historical data...",
+                "Processing candles...",
+                "Validating data integrity...",
+                "Preparing dataset..."
+            ]
+            self.show_loading_animation("Retrieving market data", duration=2, log_messages=fetch_logs)
 
             df = fetch_data(args)
 
             if df is not None:
-                self.print_info("Performing technical analysis...")
+                # Analyze data with minimal output
+                self.print_info("Calculating technical indicators...")
 
-                # Show loading animation while analyzing data
-                self.show_loading_animation("Calculating technical indicators", duration=2.5)
+                # Define custom logs for analysis
+                analysis_logs = [
+                    "Computing price indicators...",
+                    "Calculating momentum oscillators...",
+                    "Generating trend metrics...",
+                    "Evaluating volatility measures...",
+                    "Creating trading signals..."
+                ]
+                self.show_loading_animation("Analyzing market data", duration=2.5, log_messages=analysis_logs)
 
                 df_analyzed = analyze_data(df, args)
 
                 if df_analyzed is not None and not df_analyzed.empty:
-                    self.print_info(f"Training {args.model_type} model...")
+                    # Train model with enhanced loading animation
+                    self.print_info(f"Training {args.model_type.replace('_', ' ').title()} model...")
 
-                    # Show loading animation while training model (longer duration as training takes time)
-                    self.show_loading_animation("Training machine learning model", duration=4)
+                    # Define custom logs for model training (reduced verbosity)
+                    train_logs = [
+                        "Preparing dataset...",
+                        "Initializing model...",
+                        "Training model...",
+                        "Evaluating performance..."
+                    ]
+                    self.show_loading_animation("Training machine learning model", duration=4, log_messages=train_logs)
 
                     model, model_path = train_model(df_analyzed, args)
 
                     if model is not None:
-                        self.print_success("Successfully trained model.")
+                        # Display the collected logs (concise version)
+                        self.display_collected_logs(f"Model Training Summary - {args.symbol}")
 
-                        # Show model information
-                        print("\nModel information:")
-                        print(f"Type: {args.model_type}")
-                        print(f"Features: {len(model.feature_names_in_) if hasattr(model, 'feature_names_in_') else 'Unknown'}")
+                        self.print_success("\nModel trained successfully")
+                        # Mark train_model as completed
+                        self.completed_functions['train_model'] = True
+
+                        # Show minimal model information
+                        feature_count = len(model.feature_names_in_) if hasattr(model, 'feature_names_in_') else 'Unknown'
+
+                        # Create a compact summary box
+                        print("\n" + "=" * 30)
+                        print(f"{Fore.CYAN}MODEL SUMMARY{Style.RESET_ALL}")
+                        print("=" * 30)
+                        print(f"Type: {Fore.YELLOW}{args.model_type.replace('_', ' ').title()}{Style.RESET_ALL}")
+                        print(f"Features: {Fore.YELLOW}{feature_count}{Style.RESET_ALL}")
 
                         if model_path:
-                            self.print_success(f"Model saved to {model_path}")
+                            print(f"Model: {Fore.GREEN}{os.path.basename(model_path)}{Style.RESET_ALL}")
                             self.settings['model_path'] = model_path
                             self.refresh_available_models()
                     else:
@@ -856,6 +1397,12 @@ class TerminalUI:
 
         try:
             from main import fetch_data, analyze_data, predict
+
+            # Clear any previous logs
+            self.collected_logs = []
+
+            # Record operation start time
+            operation_start_time = datetime.now()
 
             args = self.build_command_args()
 
@@ -908,6 +1455,8 @@ class TerminalUI:
 
                     if df_predictions is not None:
                         self.print_success("Successfully made predictions.")
+                        # Mark make_predictions as completed
+                        self.completed_functions['make_predictions'] = True
 
                         # Display prediction summary instead of sample data
                         print("\nPrediction Summary:")
@@ -945,8 +1494,8 @@ class TerminalUI:
                         # Show loading animation while preparing output
                         self.show_loading_animation("Preparing prediction report", duration=1.5)
 
-                        # Display the collected logs
-                        self.display_collected_logs(f"Prediction Process Log - {args.symbol}")
+                        # Display the collected logs for this operation only
+                        self.display_collected_logs(f"Prediction Process Log - {args.symbol}", operation_start_time)
 
                         # Display the predictions in the current terminal
                         if self.output_generator.display_in_current_terminal(
@@ -978,6 +1527,12 @@ class TerminalUI:
 
         try:
             from main import fetch_data, analyze_data, predict, backtest
+
+            # Clear any previous logs
+            self.collected_logs = []
+
+            # Record operation start time
+            operation_start_time = datetime.now()
 
             args = self.build_command_args()
 
@@ -1048,12 +1603,17 @@ class TerminalUI:
                         # Show loading animation while preparing output
                         self.show_loading_animation("Preparing backtest report", duration=1.5)
 
+                        # Display the collected logs for this operation only
+                        self.display_collected_logs(f"Backtest Process Log - {args.symbol}", operation_start_time)
+
                         # Display the backtest results in the current terminal
                         if self.output_generator.display_in_current_terminal(
                             df_predictions, args.symbol, args.timeframe, report_type='backtest',
                             performance_metrics=performance_metrics, trading_metrics=trading_metrics
                         ):
                             self.print_success("Backtest results displayed successfully.")
+                            # Mark backtest_strategy as completed
+                            self.completed_functions['backtest_strategy'] = True
                         else:
                             self.print_error("Failed to display backtest output.")
                     else:
@@ -1072,9 +1632,23 @@ class TerminalUI:
         """Perform LLM analysis on market data."""
         self.print_header("LLM Analysis")
 
+        # First check dependencies
+        if not self.check_llm_dependencies():
+            self.print_warning("Cannot perform LLM analysis without required dependencies.")
+            self.print_info("Please install the required dependencies and try again.")
+            self.wait_for_key()
+            return
+
         try:
             from main import fetch_data, analyze_data
-            from src.analysis.local_llm import LocalLLMAnalyzer, AVAILABLE_MODELS
+            from src.analysis.local_llm import LocalLLMAnalyzer, AVAILABLE_MODELS, DEFAULT_MODEL_PATH
+            import os
+
+            # Clear any previous logs
+            self.collected_logs = []
+
+            # Record operation start time
+            operation_start_time = datetime.now()
 
             args = self.build_command_args()
 
@@ -1110,9 +1684,25 @@ class TerminalUI:
             model_info = AVAILABLE_MODELS.get(self.settings['llm_model'], {})
             model_name = model_info.get('name', self.settings['llm_model'])
 
+            # Check if model exists, offer to download if not
+            model_file_path = os.path.join(DEFAULT_MODEL_PATH, model_name)
+            if not os.path.exists(model_file_path):
+                self.print_warning(f"Model file not found: {model_name}")
+                download = self.get_input(f"Would you like to download the {self.settings['llm_model']} model now? (y/n): ")
+                if download.lower() == 'y':
+                    success = self.download_llm_model(self.settings['llm_model'])
+                    if not success:
+                        self.print_error("Failed to download model. Cannot proceed with LLM analysis.")
+                        self.wait_for_key()
+                        return
+                else:
+                    self.print_info("Model download skipped. Cannot proceed with LLM analysis.")
+                    self.wait_for_key()
+                    return
+
             # Initialize LLM analyzer
             self.print_info(f"Initializing local LLM analyzer with model {self.settings['llm_model']}...")
-            self.print_info(f"This may take a moment to download and load the model ({model_info.get('size_gb', 'unknown')} GB)")
+            self.print_info(f"This may take a moment to load the model ({model_info.get('size_gb', 'unknown')} GB)")
 
             # Show enhanced loading animation for model initialization
             model_logs = [
@@ -1140,6 +1730,12 @@ class TerminalUI:
                 model_name=model_name,
                 n_gpu_layers=n_gpu_layers
             )
+
+            # Check if LLM was initialized successfully
+            if llm_analyzer.llm is None:
+                self.print_error("Failed to initialize LLM. Check the logs for details.")
+                self.wait_for_key()
+                return
 
             # Perform LLM analysis
             self.print_info("Analyzing market data with local LLM...")
@@ -1171,8 +1767,11 @@ class TerminalUI:
                 if filename:
                     self.print_success(f"Saved LLM analysis to {filename}")
 
-            # Display the collected logs
-            self.display_collected_logs(f"LLM Analysis Process Log - {args.symbol}")
+            # Display the collected logs for this operation only
+            self.display_collected_logs(f"LLM Analysis Process Log - {args.symbol}", operation_start_time)
+
+            # Mark llm_analysis as completed
+            self.completed_functions['llm_analysis'] = True
 
             # Display results
             self.print_header(f"LLM Analysis Results - {args.symbol} ({args.timeframe})")
@@ -1238,6 +1837,12 @@ class TerminalUI:
 
             args = self.build_command_args()
 
+            # Clear any previous logs
+            self.collected_logs = []
+
+            # Record operation start time
+            operation_start_time = datetime.now()
+
             # Fetch data
             self.print_info(f"Fetching data for {args.symbol} from {args.exchange}...")
 
@@ -1279,11 +1884,21 @@ class TerminalUI:
 
             self.print_success(f"Successfully analyzed data with {len(df_analyzed.columns)} indicators.")
 
-            # Train model
-            self.print_info(f"Training {args.model_type} model...")
+            # Train model with enhanced loading animation
+            self.print_info(f"Training {args.model_type.replace('_', ' ').title()} model...")
 
-            # Show loading animation while training model
-            self.show_loading_animation("Training machine learning model", duration=4)
+            # Define custom logs for model training
+            train_logs = [
+                "Preparing training dataset...",
+                "Splitting data into train/test sets...",
+                "Scaling features...",
+                "Initializing model architecture...",
+                "Training model on historical data...",
+                "Optimizing model parameters...",
+                "Evaluating model performance...",
+                "Finalizing model..."
+            ]
+            self.show_loading_animation("Training machine learning model", duration=4, log_messages=train_logs)
 
             model, model_path = train_model(df_analyzed, args)
             if model is None:
@@ -1291,10 +1906,14 @@ class TerminalUI:
                 self.wait_for_key()
                 return
 
-            self.print_success("Successfully trained model.")
+            self.print_success("Model trained successfully")
+
+            # Show concise model information
+            feature_count = len(model.feature_names_in_) if hasattr(model, 'feature_names_in_') else 'Unknown'
+            print(f"Type: {args.model_type.replace('_', ' ').title()} | Features: {feature_count} | Tuning: {'Enabled' if args.tune else 'Disabled'}")
 
             if model_path:
-                self.print_success(f"Model saved to {model_path}")
+                self.print_info(f"Model saved as: {os.path.basename(model_path)}")
                 self.settings['model_path'] = model_path
                 self.refresh_available_models()
 
@@ -1444,6 +2063,15 @@ class TerminalUI:
                     error_msg = recommendation.get("error", "Unknown error") if recommendation else "Failed to get recommendation"
                     self.print_warning(f"LLM analysis skipped: {error_msg}")
 
+            # Mark all functions as completed
+            self.completed_functions['fetch_data'] = True
+            self.completed_functions['analyze_data'] = True
+            self.completed_functions['train_model'] = True
+            self.completed_functions['make_predictions'] = True
+            self.completed_functions['backtest_strategy'] = True
+            if args.use_llm:
+                self.completed_functions['llm_analysis'] = True
+
             self.print_success("\nSuccessfully completed all operations.")
 
         except Exception as e:
@@ -1451,11 +2079,12 @@ class TerminalUI:
 
         self.wait_for_key()
 
-    def display_collected_logs(self, title="Process Logs"):
+    def display_collected_logs(self, title="Process Logs", operation_start_time=None):
         """Display all collected logs in a stylish format.
 
         Args:
             title (str): Title for the log display
+            operation_start_time (datetime, optional): If provided, only show logs after this time
         """
         if not hasattr(self, 'collected_logs') or not self.collected_logs:
             return
@@ -1466,8 +2095,37 @@ class TerminalUI:
         print(f"{Fore.CYAN}{title:^{width}}{Style.RESET_ALL}")
         print("=" * width)
 
+        # Filter logs by operation time if provided
+        filtered_logs = self.collected_logs
+        if operation_start_time:
+            # Convert string timestamps to datetime objects for comparison
+            filtered_logs = []
+            for log in self.collected_logs:
+                try:
+                    # Parse timestamp (format: HH:MM:SS.mmm)
+                    log_time_str = log[0]
+                    # Get current date and combine with log time
+                    today = datetime.now().strftime("%Y-%m-%d")
+                    log_datetime = datetime.strptime(f"{today} {log_time_str}", "%Y-%m-%d %H:%M:%S.%f")
+
+                    # Only include logs after operation start time
+                    if log_datetime >= operation_start_time:
+                        filtered_logs.append(log)
+                except Exception:
+                    # If parsing fails, include the log anyway
+                    filtered_logs.append(log)
+
+        # Remove duplicate logs (same timestamp and message)
+        unique_logs = []
+        seen = set()
+        for log in filtered_logs:
+            log_str = f"{log[0]}:{log[1]}"
+            if log_str not in seen:
+                seen.add(log_str)
+                unique_logs.append(log)
+
         # Print logs with alternating background colors
-        for i, (timestamp, message) in enumerate(self.collected_logs):
+        for i, (timestamp, message) in enumerate(unique_logs):
             # Choose color based on message content
             if "error" in message.lower() or "failed" in message.lower():
                 color = Fore.RED
@@ -1482,6 +2140,9 @@ class TerminalUI:
 
             # Print formatted log entry
             print(f"{Fore.WHITE}[{timestamp}]{Style.RESET_ALL} {color}{message}{Style.RESET_ALL}")
+
+        # Clear logs after displaying them
+        self.collected_logs = []
 
         print("=" * width)
         print()
@@ -1558,6 +2219,111 @@ class TerminalUI:
 
         except Exception as e:
             self.print_error(f"Error displaying guide: {e}")
+
+        self.wait_for_key()
+
+    def clear_data(self):
+        """Clear data files with confirmation."""
+        self.print_header("Clear Data")
+
+        print(f"{Fore.YELLOW}WARNING: This will permanently delete data files.{Style.RESET_ALL}")
+        print("\nSelect what to clear:")
+        print(f"{Fore.GREEN}1{Style.RESET_ALL}: Raw data files (data directory)")
+        print(f"{Fore.GREEN}2{Style.RESET_ALL}: Analysis results (results directory)")
+        print(f"{Fore.GREEN}3{Style.RESET_ALL}: Trained models (models directory)")
+        print(f"{Fore.GREEN}4{Style.RESET_ALL}: All data (everything above)")
+        print(f"{Fore.GREEN}b{Style.RESET_ALL}: Back to main menu")
+
+        choice = self.get_input("\nEnter your choice: ")
+
+        if choice.lower() == 'b':
+            return
+
+        # Define directories to clear based on user choice
+        directories_to_clear = []
+        if choice == '1':
+            directories_to_clear = ['data']
+            confirm_message = "Are you sure you want to delete all raw data files?"
+        elif choice == '2':
+            directories_to_clear = ['results']
+            confirm_message = "Are you sure you want to delete all analysis results?"
+        elif choice == '3':
+            directories_to_clear = ['models']
+            confirm_message = "Are you sure you want to delete all trained models?"
+        elif choice == '4':
+            directories_to_clear = ['data', 'results', 'models']
+            confirm_message = "Are you sure you want to delete ALL data files, results, and models?"
+        else:
+            self.print_error("Invalid choice. Please try again.")
+            time.sleep(1)
+            return
+
+        # Ask for confirmation
+        print(f"\n{Fore.RED}{confirm_message}{Style.RESET_ALL}")
+        confirm = self.get_input("Type 'yes' to confirm: ")
+
+        if confirm.lower() != 'yes':
+            self.print_info("Operation cancelled.")
+            self.wait_for_key()
+            return
+
+        # Clear the selected directories
+        files_deleted = 0
+        for directory in directories_to_clear:
+            if os.path.exists(directory):
+                # Show loading animation
+                self.print_info(f"\nClearing {directory} directory...")
+
+                # Get list of files
+                files = [os.path.join(directory, f) for f in os.listdir(directory)
+                         if os.path.isfile(os.path.join(directory, f))]
+
+                if not files:
+                    self.print_info(f"No files found in {directory} directory.")
+                    continue
+
+                # Show loading animation while deleting files
+                delete_logs = [
+                    f"Scanning {directory} directory...",
+                    f"Found {len(files)} files to delete...",
+                    f"Preparing to remove files...",
+                    f"Deleting files...",
+                    f"Verifying deletion..."
+                ]
+                self.show_loading_animation(f"Clearing {directory} directory", duration=2, log_messages=delete_logs)
+
+                # Delete files
+                for file_path in files:
+                    try:
+                        os.remove(file_path)
+                        files_deleted += 1
+                    except Exception as e:
+                        self.print_error(f"Error deleting {file_path}: {e}")
+            else:
+                self.print_warning(f"Directory '{directory}' not found.")
+
+        # Show summary
+        if files_deleted > 0:
+            self.print_success(f"\nSuccessfully deleted {files_deleted} files.")
+        else:
+            self.print_info("No files were deleted.")
+
+        # Reset completed functions if relevant directories were cleared
+        if 'data' in directories_to_clear or 'results' in directories_to_clear:
+            self.completed_functions['fetch_data'] = False
+            self.completed_functions['analyze_data'] = False
+
+        if 'models' in directories_to_clear:
+            self.completed_functions['train_model'] = False
+
+        if 'results' in directories_to_clear:
+            self.completed_functions['make_predictions'] = False
+            self.completed_functions['backtest_strategy'] = False
+            self.completed_functions['llm_analysis'] = False
+
+        # Update available models list if models directory was cleared
+        if 'models' in directories_to_clear:
+            self.refresh_available_models()
 
         self.wait_for_key()
 

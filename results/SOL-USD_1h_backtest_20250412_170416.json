@@ -1,7 +1,0 @@
-{
-    "performance": {
-        "accuracy": 0.957648401826484,
-        "precision": 0.9575237234523272,
-        "recall": 0.9586066500791676,
-        "f1_score": 0.9580648807505369,
-        "true_positives": 
