@@ -47,43 +47,43 @@ Alternatively, the application can be run in different modes via command line:
 ### Fetch Data
 
 ```
-python main.py --mode fetch --exchange binance --symbol BTC/USDT --timeframe 1h --limit 1000 --save
+python main.py --mode fetch --exchange coinbase --symbol BTC/USDT --timeframe 1h --limit 1000 --save
 ```
 
 ### Analyze Data
 
 ```
-python main.py --mode analyze --exchange binance --symbol BTC/USDT --timeframe 1h --save
+python main.py --mode analyze --exchange coinbase --symbol BTC/USDT --timeframe 1h --save
 ```
 
 ### Train Model
 
 ```
-python main.py --mode train --exchange binance --symbol BTC/USDT --timeframe 1h --model-type random_forest --tune --save
+python main.py --mode train --exchange coinbase --symbol BTC/USDT --timeframe 1h --model-type random_forest --tune --save
 ```
 
 ### Make Predictions
 
 ```
-python main.py --mode predict --exchange binance --symbol BTC/USDT --timeframe 1h --model-path models/your_model.joblib --save
+python main.py --mode predict --exchange coinbase --symbol BTC/USDT --timeframe 1h --model-path models/your_model.joblib --save
 ```
 
 ### Backtest
 
 ```
-python main.py --mode backtest --exchange binance --symbol BTC/USDT --timeframe 1h --model-path models/your_model.joblib --save
+python main.py --mode backtest --exchange coinbase --symbol BTC/USDT --timeframe 1h --model-path models/your_model.joblib --save
 ```
 
 ### Run All Steps
 
 ```
-python main.py --mode all --exchange binance --symbol BTC/USDT --timeframe 1h --model-type random_forest --save
+python main.py --mode all --exchange coinbase --symbol BTC/USDT --timeframe 1h --model-type random_forest --save
 ```
 
 ## Command Line Arguments
 
 - `--mode`: Operation mode (fetch, analyze, train, predict, backtest, all)
-- `--exchange`: Exchange to fetch data from (default: binance)
+- `--exchange`: Exchange to fetch data from (default: coinbase)
 - `--symbol`: Symbol to analyze (default: BTC/USDT)
 - `--timeframe`: Timeframe for data (default: 1h)
 - `--limit`: Number of candles to fetch (default: 1000)

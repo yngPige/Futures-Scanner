@@ -1005,3 +1005,727 @@ weighted avg       0.91      0.91      0.91        99
 2025-04-12 22:13:27,231 - main - INFO - Trading metrics: {'total_trades': np.float64(85.0), 'winning_trades': np.int64(153), 'losing_trades': np.int64(82), 'win_rate': np.float64(0.6510638297872341), 'strategy_return': np.float64(nan), 'buy_hold_return': np.float64(nan), 'annualized_strategy_return': np.float64(nan), 'annualized_buy_hold_return': np.float64(nan), 'strategy_max_drawdown': np.float64(-0.033688735067544884), 'buy_hold_max_drawdown': np.float64(-0.3362964886268125), 'strategy_sharpe': np.float64(4.510356548167118), 'buy_hold_sharpe': np.float64(0.09467569499260685)}
 2025-04-12 22:13:27,235 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_backtest_20250412_221327.bat
 2025-04-12 22:13:27,242 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_backtest_20250412_221327.bat
+2025-04-12 22:22:07,636 - main - INFO - Fetching data for BTC/USDT from binance
+2025-04-12 22:22:07,644 - src.data.data_fetcher - INFO - Successfully initialized binance exchange
+2025-04-12 22:22:07,891 - src.data.data_fetcher - ERROR - Error fetching OHLCV data for BTC/USDT: binance GET https://api.binance.com/api/v3/exchangeInfo 451  {
+  "code": 0,
+  "msg": "Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error."
+}
+2025-04-12 22:22:07,892 - main - ERROR - Failed to fetch data for BTC/USDT
+2025-04-12 22:38:45,635 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 22:38:45,638 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 22:38:46,920 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 22:38:46,925 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_223846.csv
+2025-04-12 22:38:46,928 - main - INFO - Performing technical analysis
+2025-04-12 22:38:46,928 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 22:38:46,940 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 22:38:46,987 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 22:38:47,013 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 22:38:47,017 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 22:38:47,017 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 22:38:47,029 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 22:38:47,048 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_223847.csv
+2025-04-12 22:38:47,048 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_223847.csv
+2025-04-12 22:38:47,049 - main - INFO - Training random_forest model
+2025-04-12 22:38:47,049 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 22:38:47,058 - src.models.prediction_model - INFO - Prepared features with 52 columns and 295 samples
+2025-04-12 22:38:47,065 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 22:38:47,209 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 22:38:47,209 - src.models.prediction_model - INFO - Accuracy: 0.8644
+2025-04-12 22:38:47,209 - src.models.prediction_model - INFO - Precision: 0.8571
+2025-04-12 22:38:47,210 - src.models.prediction_model - INFO - Recall: 0.9091
+2025-04-12 22:38:47,210 - src.models.prediction_model - INFO - F1 Score: 0.8824
+2025-04-12 22:38:47,215 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.88      0.81      0.84        26
+           1       0.86      0.91      0.88        33
+
+    accuracy                           0.86        59
+   macro avg       0.87      0.86      0.86        59
+weighted avg       0.87      0.86      0.86        59
+
+2025-04-12 22:38:47,222 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 22:38:47,222 - src.models.prediction_model - INFO - vwap: 0.0459
+2025-04-12 22:38:47,222 - src.models.prediction_model - INFO - ics_26: 0.0379
+2025-04-12 22:38:47,223 - src.models.prediction_model - INFO - sma_50: 0.0378
+2025-04-12 22:38:47,223 - src.models.prediction_model - INFO - bbu_20_2.0: 0.0355
+2025-04-12 22:38:47,223 - src.models.prediction_model - INFO - dmp_14: 0.0351
+2025-04-12 22:38:47,223 - src.models.prediction_model - INFO - isa_9: 0.0342
+2025-04-12 22:38:47,224 - src.models.prediction_model - INFO - obv: 0.0329
+2025-04-12 22:38:47,224 - src.models.prediction_model - INFO - SUPERT_14_3.0: 0.0305
+2025-04-12 22:38:47,224 - src.models.prediction_model - INFO - stochk_14_3_3: 0.0300
+2025-04-12 22:38:47,224 - src.models.prediction_model - INFO - dmn_14: 0.0298
+2025-04-12 22:38:47,256 - src.models.prediction_model - INFO - Model saved to models\BTC_USDT_random_forest_20250412_223847.joblib
+2025-04-12 22:38:47,256 - main - INFO - Model saved to models\BTC_USDT_random_forest_20250412_223847.joblib
+2025-04-12 22:38:47,257 - main - INFO - Making predictions
+2025-04-12 22:38:47,258 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 22:38:47,301 - src.models.prediction_model - INFO - Model loaded from models\BTC_USDT_random_forest_20250412_223847.joblib
+2025-04-12 22:38:47,316 - src.models.prediction_model - INFO - Made predictions for 300 samples
+2025-04-12 22:38:47,335 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_predictions_20250412_223847.csv
+2025-04-12 22:38:47,340 - main - INFO - Backtesting predictions
+2025-04-12 22:38:47,341 - src.utils.helpers - INFO - Calculated performance metrics: Accuracy=0.9733, F1=0.9740
+2025-04-12 22:38:47,341 - main - INFO - Performance metrics: {'accuracy': np.float64(0.9733333333333334), 'precision': np.float64(0.967741935483871), 'recall': np.float64(0.9803921568627451), 'f1_score': np.float64(0.9740259740259739), 'true_positives': np.int64(150), 'false_positives': np.int64(5), 'true_negatives': np.int64(142), 'false_negatives': np.int64(3)}
+2025-04-12 22:38:47,345 - src.utils.helpers - INFO - Calculated trading metrics: Win Rate=0.6452, Strategy Return=nan
+2025-04-12 22:38:47,346 - main - INFO - Trading metrics: {'total_trades': np.float64(48.0), 'winning_trades': np.int64(100), 'losing_trades': np.int64(55), 'win_rate': np.float64(0.6451612903225806), 'strategy_return': np.float64(nan), 'buy_hold_return': np.float64(nan), 'annualized_strategy_return': np.float64(nan), 'annualized_buy_hold_return': np.float64(nan), 'strategy_max_drawdown': np.float64(-0.027652661320729632), 'buy_hold_max_drawdown': np.float64(-0.14068423551216913), 'strategy_sharpe': np.float64(3.3822247120959408), 'buy_hold_sharpe': np.float64(0.1901873006977483)}
+2025-04-12 22:38:47,347 - src.utils.helpers - ERROR - Error saving configuration to results/BTC_USDT_1h_backtest_20250412_223847.json: Object of type int64 is not JSON serializable
+2025-04-12 22:38:47,354 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_all_20250412_223847.bat
+2025-04-12 22:38:47,360 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_all_20250412_223847.bat
+2025-04-12 22:39:43,157 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 22:39:43,160 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 22:39:44,454 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 22:39:44,458 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_223944.csv
+2025-04-12 22:39:44,461 - main - INFO - Performing technical analysis
+2025-04-12 22:39:44,461 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 22:39:44,472 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 22:39:44,518 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 22:39:44,546 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 22:39:44,549 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 22:39:44,550 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 22:39:44,560 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 22:39:44,579 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_223944.csv
+2025-04-12 22:39:44,580 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_223944.csv
+2025-04-12 22:39:44,580 - main - INFO - Making predictions
+2025-04-12 22:39:44,580 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 22:39:44,602 - src.models.prediction_model - INFO - Model loaded from models\BTC_USDT_random_forest_20250412_223847.joblib
+2025-04-12 22:39:44,620 - src.models.prediction_model - INFO - Made predictions for 300 samples
+2025-04-12 22:39:44,642 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_predictions_20250412_223944.csv
+2025-04-12 22:39:44,642 - main - INFO - Backtesting predictions
+2025-04-12 22:39:44,643 - src.utils.helpers - ERROR - Missing columns: prediction or target
+2025-04-12 22:39:44,648 - src.utils.helpers - INFO - Calculated trading metrics: Win Rate=0.6452, Strategy Return=nan
+2025-04-12 22:39:44,648 - main - INFO - Trading metrics: {'total_trades': np.float64(48.0), 'winning_trades': np.int64(100), 'losing_trades': np.int64(55), 'win_rate': np.float64(0.6451612903225806), 'strategy_return': np.float64(nan), 'buy_hold_return': np.float64(nan), 'annualized_strategy_return': np.float64(nan), 'annualized_buy_hold_return': np.float64(nan), 'strategy_max_drawdown': np.float64(-0.027652661320729632), 'buy_hold_max_drawdown': np.float64(-0.14068423551216913), 'strategy_sharpe': np.float64(3.3822247120959408), 'buy_hold_sharpe': np.float64(0.18599901009798844)}
+2025-04-12 22:39:44,653 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_backtest_20250412_223944.bat
+2025-04-12 22:39:44,662 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_backtest_20250412_223944.bat
+2025-04-12 22:40:56,764 - main - INFO - Fetching data for XRP-USD from coinbase
+2025-04-12 22:40:56,767 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 22:40:57,320 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for XRP-USD
+2025-04-12 22:40:57,395 - src.utils.helpers - INFO - Saved DataFrame to data/XRP-USD_1h_20250412_224057.csv
+2025-04-12 22:41:00,461 - main - INFO - Fetching data for XRP-USD from coinbase
+2025-04-12 22:41:00,464 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 22:41:00,629 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for XRP-USD
+2025-04-12 22:41:00,703 - src.utils.helpers - INFO - Saved DataFrame to data/XRP-USD_1h_20250412_224100.csv
+2025-04-12 22:41:00,704 - main - INFO - Performing technical analysis
+2025-04-12 22:41:00,704 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 22:41:00,720 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 22:41:01,580 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 22:41:01,978 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 22:41:01,985 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 22:41:01,987 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 22:41:02,018 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 22:41:02,571 - src.utils.helpers - INFO - Saved DataFrame to results/XRP-USD_1h_analysis_20250412_224102.csv
+2025-04-12 22:41:02,572 - main - INFO - Saved analysis results to results/XRP-USD_1h_analysis_20250412_224102.csv
+2025-04-12 22:41:02,589 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\XRP-USD_1h_analysis_20250412_224102.bat
+2025-04-12 22:41:02,596 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\XRP-USD_1h_analysis_20250412_224102.bat
+2025-04-12 22:41:14,924 - main - INFO - Fetching data for XRP-USD from coinbase
+2025-04-12 22:41:14,928 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 22:41:15,167 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for XRP-USD
+2025-04-12 22:41:15,240 - src.utils.helpers - INFO - Saved DataFrame to data/XRP-USD_1h_20250412_224115.csv
+2025-04-12 22:41:15,241 - main - INFO - Performing technical analysis
+2025-04-12 22:41:15,241 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 22:41:15,257 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 22:41:16,084 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 22:41:16,492 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 22:41:16,498 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 22:41:16,500 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 22:41:16,522 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 22:41:17,033 - src.utils.helpers - INFO - Saved DataFrame to results/XRP-USD_1h_analysis_20250412_224116.csv
+2025-04-12 22:41:17,034 - main - INFO - Saved analysis results to results/XRP-USD_1h_analysis_20250412_224116.csv
+2025-04-12 22:41:17,035 - main - INFO - Training random_forest model
+2025-04-12 22:41:17,035 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 22:41:17,048 - src.models.prediction_model - INFO - Prepared features with 52 columns and 8755 samples
+2025-04-12 22:41:17,066 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 22:41:21,004 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 22:41:21,004 - src.models.prediction_model - INFO - Accuracy: 0.8098
+2025-04-12 22:41:21,005 - src.models.prediction_model - INFO - Precision: 0.7973
+2025-04-12 22:41:21,005 - src.models.prediction_model - INFO - Recall: 0.8223
+2025-04-12 22:41:21,005 - src.models.prediction_model - INFO - F1 Score: 0.8096
+2025-04-12 22:41:21,010 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.82      0.80      0.81       890
+           1       0.80      0.82      0.81       861
+
+    accuracy                           0.81      1751
+   macro avg       0.81      0.81      0.81      1751
+weighted avg       0.81      0.81      0.81      1751
+
+2025-04-12 22:41:21,018 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 22:41:21,018 - src.models.prediction_model - INFO - ics_26: 0.0502
+2025-04-12 22:41:21,019 - src.models.prediction_model - INFO - cmf: 0.0307
+2025-04-12 22:41:21,019 - src.models.prediction_model - INFO - sma_200: 0.0292
+2025-04-12 22:41:21,019 - src.models.prediction_model - INFO - adx_14: 0.0291
+2025-04-12 22:41:21,019 - src.models.prediction_model - INFO - volatility_ratio: 0.0290
+2025-04-12 22:41:21,020 - src.models.prediction_model - INFO - bbb_20_2.0: 0.0286
+2025-04-12 22:41:21,020 - src.models.prediction_model - INFO - atr_14: 0.0285
+2025-04-12 22:41:21,020 - src.models.prediction_model - INFO - zscore_14: 0.0282
+2025-04-12 22:41:21,020 - src.models.prediction_model - INFO - obv: 0.0277
+2025-04-12 22:41:21,021 - src.models.prediction_model - INFO - macds_12_26_9: 0.0277
+2025-04-12 22:41:21,067 - src.models.prediction_model - INFO - Model saved to models\XRP-USD_random_forest_20250412_224121.joblib
+2025-04-12 22:41:21,067 - main - INFO - Model saved to models\XRP-USD_random_forest_20250412_224121.joblib
+2025-04-12 22:41:36,516 - main - INFO - Fetching data for XRP-USD from coinbase
+2025-04-12 22:41:36,520 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 22:41:36,775 - src.data.data_fetcher - INFO - Successfully fetched 8760 rows from yfinance for XRP-USD
+2025-04-12 22:41:36,848 - src.utils.helpers - INFO - Saved DataFrame to data/XRP-USD_1h_20250412_224136.csv
+2025-04-12 22:41:36,849 - main - INFO - Performing technical analysis
+2025-04-12 22:41:36,849 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 22:41:36,865 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 22:41:37,707 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 22:41:38,104 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 22:41:38,111 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 22:41:38,112 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 22:41:38,136 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 22:41:38,674 - src.utils.helpers - INFO - Saved DataFrame to results/XRP-USD_1h_analysis_20250412_224138.csv
+2025-04-12 22:41:38,675 - main - INFO - Saved analysis results to results/XRP-USD_1h_analysis_20250412_224138.csv
+2025-04-12 22:41:38,675 - main - INFO - Making predictions
+2025-04-12 22:41:38,676 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 22:41:38,719 - src.models.prediction_model - INFO - Model loaded from models\XRP-USD_random_forest_20250412_224121.joblib
+2025-04-12 22:41:38,873 - src.models.prediction_model - INFO - Made predictions for 8760 samples
+2025-04-12 22:41:39,394 - src.utils.helpers - INFO - Saved DataFrame to results/XRP-USD_1h_predictions_20250412_224138.csv
+2025-04-12 22:41:39,402 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\XRP-USD_1h_prediction_20250412_224139.bat
+2025-04-12 22:41:39,409 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\XRP-USD_1h_prediction_20250412_224139.bat
+2025-04-12 22:55:16,496 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 22:55:16,501 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 22:55:17,797 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 22:55:17,801 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_225517.csv
+2025-04-12 23:09:03,856 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:09:03,859 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:09:05,163 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:09:05,167 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_230905.csv
+2025-04-12 23:09:05,170 - main - INFO - Performing technical analysis
+2025-04-12 23:09:05,171 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:09:05,182 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:09:05,231 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:09:05,259 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:09:05,262 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:09:05,263 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:09:05,273 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:09:05,292 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_230905.csv
+2025-04-12 23:09:05,292 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_230905.csv
+2025-04-12 23:09:05,294 - src.analysis.local_llm - ERROR - Failed to import llama_cpp: No module named 'llama_cpp'
+2025-04-12 23:09:05,294 - src.analysis.local_llm - INFO - Please install llama-cpp-python: pip install llama-cpp-python
+2025-04-12 23:09:05,297 - src.analysis.local_llm - ERROR - LLM not initialized
+2025-04-12 23:09:05,298 - src.analysis.local_llm - INFO - Saved LLM analysis to results/BTC_USDT_1h_llm_analysis_20250412_230905.json
+2025-04-12 23:12:36,321 - main - INFO - Fetching data for XRP from coinbase
+2025-04-12 23:12:36,324 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:12:36,741 - yfinance - ERROR - 
+1 Failed download:
+2025-04-12 23:12:36,741 - yfinance - ERROR - ['XRP']: YFPricesMissingError('possibly delisted; no price data found  (period=1y)')
+2025-04-12 23:12:36,749 - src.data.data_fetcher - INFO - Successfully fetched 0 rows from yfinance for XRP
+2025-04-12 23:12:36,750 - main - ERROR - Failed to fetch data for XRP
+2025-04-12 23:21:18,873 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:21:18,876 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:21:20,176 - src.data.data_fetcher - INFO - Successfully fetched 100 candles for BTC/USDT
+2025-04-12 23:21:20,180 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_232120.csv
+2025-04-12 23:21:24,742 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:21:24,745 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:21:26,051 - src.data.data_fetcher - INFO - Successfully fetched 100 candles for BTC/USDT
+2025-04-12 23:21:26,053 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_232126.csv
+2025-04-12 23:21:26,056 - main - INFO - Performing technical analysis
+2025-04-12 23:21:26,057 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:21:26,068 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:21:26,096 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:21:26,113 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:21:26,116 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:21:26,117 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:21:26,127 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:21:26,135 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_232126.csv
+2025-04-12 23:21:26,136 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_232126.csv
+2025-04-12 23:21:26,157 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_analysis_20250412_232126.bat
+2025-04-12 23:21:26,165 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_analysis_20250412_232126.bat
+2025-04-12 23:21:50,253 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:21:50,257 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:21:51,561 - src.data.data_fetcher - INFO - Successfully fetched 100 candles for BTC/USDT
+2025-04-12 23:21:51,563 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_232151.csv
+2025-04-12 23:21:51,567 - main - INFO - Performing technical analysis
+2025-04-12 23:21:51,567 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:21:51,577 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:21:51,604 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:21:51,620 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:21:51,622 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:21:51,623 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:21:51,632 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:21:51,641 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_232151.csv
+2025-04-12 23:21:51,641 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_232151.csv
+2025-04-12 23:21:51,659 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_analysis_20250412_232151.bat
+2025-04-12 23:21:51,667 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_analysis_20250412_232151.bat
+2025-04-12 23:22:51,231 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:22:51,235 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:22:52,550 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:22:52,554 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_232252.csv
+2025-04-12 23:29:32,466 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:29:32,469 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:29:33,790 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:29:33,795 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_232933.csv
+2025-04-12 23:31:35,445 - main - INFO - Fetching data for SOL/USDT from kucoin
+2025-04-12 23:31:35,449 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 23:31:36,771 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for SOL/USDT
+2025-04-12 23:31:36,776 - src.utils.helpers - INFO - Saved DataFrame to data/SOL_USDT_1h_20250412_233136.csv
+2025-04-12 23:31:48,098 - main - INFO - Fetching data for SOL/USDT from kucoin
+2025-04-12 23:31:48,102 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 23:31:49,459 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for SOL/USDT
+2025-04-12 23:31:49,463 - src.utils.helpers - INFO - Saved DataFrame to data/SOL_USDT_1h_20250412_233149.csv
+2025-04-12 23:31:52,628 - main - INFO - Performing technical analysis
+2025-04-12 23:31:52,628 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:31:52,662 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:31:52,724 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:31:52,758 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:31:52,762 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:31:52,762 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:31:52,773 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:31:52,801 - src.utils.helpers - INFO - Saved DataFrame to results/SOL_USDT_1h_analysis_20250412_233152.csv
+2025-04-12 23:31:52,802 - main - INFO - Saved analysis results to results/SOL_USDT_1h_analysis_20250412_233152.csv
+2025-04-12 23:31:54,396 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_analysis_20250412_233154.bat
+2025-04-12 23:31:54,403 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_analysis_20250412_233154.bat
+2025-04-12 23:32:30,145 - main - INFO - Fetching data for SOL/USDT from kucoin
+2025-04-12 23:32:30,149 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 23:32:31,677 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for SOL/USDT
+2025-04-12 23:32:31,682 - src.utils.helpers - INFO - Saved DataFrame to data/SOL_USDT_1h_20250412_233231.csv
+2025-04-12 23:32:34,848 - main - INFO - Performing technical analysis
+2025-04-12 23:32:34,848 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:32:34,852 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:32:34,911 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:32:34,941 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:32:34,943 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:32:34,944 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:32:34,954 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:32:34,982 - src.utils.helpers - INFO - Saved DataFrame to results/SOL_USDT_1h_analysis_20250412_233234.csv
+2025-04-12 23:32:34,983 - main - INFO - Saved analysis results to results/SOL_USDT_1h_analysis_20250412_233234.csv
+2025-04-12 23:32:36,571 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_analysis_20250412_233236.bat
+2025-04-12 23:32:36,578 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_analysis_20250412_233236.bat
+2025-04-12 23:33:32,137 - main - INFO - Fetching data for SOL/USDT from kucoin
+2025-04-12 23:33:32,141 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 23:33:33,844 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for SOL/USDT
+2025-04-12 23:33:33,848 - src.utils.helpers - INFO - Saved DataFrame to data/SOL_USDT_1h_20250412_233333.csv
+2025-04-12 23:33:36,490 - main - INFO - Performing technical analysis
+2025-04-12 23:33:36,490 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:33:36,494 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:33:36,551 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:33:36,581 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:33:36,582 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:33:36,583 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:33:36,593 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:33:36,622 - src.utils.helpers - INFO - Saved DataFrame to results/SOL_USDT_1h_analysis_20250412_233336.csv
+2025-04-12 23:33:36,622 - main - INFO - Saved analysis results to results/SOL_USDT_1h_analysis_20250412_233336.csv
+2025-04-12 23:33:40,832 - main - INFO - Training random_forest model
+2025-04-12 23:33:40,832 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 23:33:40,840 - src.models.prediction_model - INFO - Prepared features with 54 columns and 495 samples
+2025-04-12 23:33:40,847 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 23:33:58,007 - src.models.prediction_model - INFO - Best parameters: {'max_depth': None, 'min_samples_leaf': 1, 'min_samples_split': 2, 'n_estimators': 50}
+2025-04-12 23:33:58,007 - src.models.prediction_model - INFO - Best score: 0.8420168067226891
+2025-04-12 23:33:58,016 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 23:33:58,016 - src.models.prediction_model - INFO - Accuracy: 0.8081
+2025-04-12 23:33:58,016 - src.models.prediction_model - INFO - Precision: 0.8235
+2025-04-12 23:33:58,017 - src.models.prediction_model - INFO - Recall: 0.8077
+2025-04-12 23:33:58,017 - src.models.prediction_model - INFO - F1 Score: 0.8155
+2025-04-12 23:33:58,022 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.79      0.81      0.80        47
+           1       0.82      0.81      0.82        52
+
+    accuracy                           0.81        99
+   macro avg       0.81      0.81      0.81        99
+weighted avg       0.81      0.81      0.81        99
+
+2025-04-12 23:33:58,026 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 23:33:58,026 - src.models.prediction_model - INFO - ao: 0.0489
+2025-04-12 23:33:58,027 - src.models.prediction_model - INFO - obv: 0.0384
+2025-04-12 23:33:58,027 - src.models.prediction_model - INFO - isa_9: 0.0342
+2025-04-12 23:33:58,027 - src.models.prediction_model - INFO - ema_26: 0.0321
+2025-04-12 23:33:58,027 - src.models.prediction_model - INFO - bbu_20_2.0: 0.0317
+2025-04-12 23:33:58,027 - src.models.prediction_model - INFO - volatility_ratio: 0.0315
+2025-04-12 23:33:58,028 - src.models.prediction_model - INFO - iks_26: 0.0307
+2025-04-12 23:33:58,028 - src.models.prediction_model - INFO - ema_12: 0.0295
+2025-04-12 23:33:58,028 - src.models.prediction_model - INFO - ics_26: 0.0292
+2025-04-12 23:33:58,028 - src.models.prediction_model - INFO - kcue_20_2: 0.0291
+2025-04-12 23:33:58,046 - src.models.prediction_model - INFO - Model saved to models\SOL_USDT_random_forest_20250412_233358.joblib
+2025-04-12 23:33:58,046 - main - INFO - Model saved to models\SOL_USDT_random_forest_20250412_233358.joblib
+2025-04-12 23:34:10,905 - main - INFO - Fetching data for SOL/USDT from kucoin
+2025-04-12 23:34:10,908 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 23:34:12,221 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for SOL/USDT
+2025-04-12 23:34:12,225 - src.utils.helpers - INFO - Saved DataFrame to data/SOL_USDT_1h_20250412_233412.csv
+2025-04-12 23:34:14,898 - main - INFO - Performing technical analysis
+2025-04-12 23:34:14,898 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:34:14,901 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:34:14,962 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:34:14,991 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:34:14,994 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:34:14,994 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:34:15,003 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:34:15,033 - src.utils.helpers - INFO - Saved DataFrame to results/SOL_USDT_1h_analysis_20250412_233415.csv
+2025-04-12 23:34:15,033 - main - INFO - Saved analysis results to results/SOL_USDT_1h_analysis_20250412_233415.csv
+2025-04-12 23:34:17,144 - main - INFO - Making predictions
+2025-04-12 23:34:17,144 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 23:34:17,157 - src.models.prediction_model - INFO - Model loaded from models\SOL_USDT_random_forest_20250412_233358.joblib
+2025-04-12 23:34:17,168 - src.models.prediction_model - INFO - Made predictions for 500 samples
+2025-04-12 23:34:17,197 - src.utils.helpers - INFO - Saved DataFrame to results/SOL_USDT_1h_predictions_20250412_233417.csv
+2025-04-12 23:34:18,788 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_prediction_20250412_233418.bat
+2025-04-12 23:34:18,795 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_prediction_20250412_233418.bat
+2025-04-12 23:34:53,240 - main - INFO - Fetching data for SOL/USDT from kucoin
+2025-04-12 23:34:53,244 - src.data.data_fetcher - INFO - Successfully initialized kucoin exchange
+2025-04-12 23:34:54,746 - src.data.data_fetcher - INFO - Successfully fetched 500 candles for SOL/USDT
+2025-04-12 23:34:54,751 - src.utils.helpers - INFO - Saved DataFrame to data/SOL_USDT_1h_20250412_233454.csv
+2025-04-12 23:34:57,392 - main - INFO - Performing technical analysis
+2025-04-12 23:34:57,392 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:34:57,395 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:34:57,455 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:34:57,484 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:34:57,486 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:34:57,487 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:34:57,497 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:34:57,527 - src.utils.helpers - INFO - Saved DataFrame to results/SOL_USDT_1h_analysis_20250412_233457.csv
+2025-04-12 23:34:57,527 - main - INFO - Saved analysis results to results/SOL_USDT_1h_analysis_20250412_233457.csv
+2025-04-12 23:35:01,738 - main - INFO - Training random_forest model
+2025-04-12 23:35:01,738 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 23:35:01,747 - src.models.prediction_model - INFO - Prepared features with 54 columns and 495 samples
+2025-04-12 23:35:01,753 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 23:35:16,331 - src.models.prediction_model - INFO - Best parameters: {'max_depth': None, 'min_samples_leaf': 1, 'min_samples_split': 2, 'n_estimators': 50}
+2025-04-12 23:35:16,332 - src.models.prediction_model - INFO - Best score: 0.8420168067226891
+2025-04-12 23:35:16,340 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 23:35:16,340 - src.models.prediction_model - INFO - Accuracy: 0.8081
+2025-04-12 23:35:16,340 - src.models.prediction_model - INFO - Precision: 0.8235
+2025-04-12 23:35:16,340 - src.models.prediction_model - INFO - Recall: 0.8077
+2025-04-12 23:35:16,341 - src.models.prediction_model - INFO - F1 Score: 0.8155
+2025-04-12 23:35:16,346 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.79      0.81      0.80        47
+           1       0.82      0.81      0.82        52
+
+    accuracy                           0.81        99
+   macro avg       0.81      0.81      0.81        99
+weighted avg       0.81      0.81      0.81        99
+
+2025-04-12 23:35:16,350 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 23:35:16,350 - src.models.prediction_model - INFO - ao: 0.0490
+2025-04-12 23:35:16,350 - src.models.prediction_model - INFO - obv: 0.0384
+2025-04-12 23:35:16,350 - src.models.prediction_model - INFO - isa_9: 0.0342
+2025-04-12 23:35:16,351 - src.models.prediction_model - INFO - ema_26: 0.0321
+2025-04-12 23:35:16,351 - src.models.prediction_model - INFO - bbu_20_2.0: 0.0317
+2025-04-12 23:35:16,351 - src.models.prediction_model - INFO - volatility_ratio: 0.0313
+2025-04-12 23:35:16,351 - src.models.prediction_model - INFO - iks_26: 0.0310
+2025-04-12 23:35:16,351 - src.models.prediction_model - INFO - ema_12: 0.0295
+2025-04-12 23:35:16,352 - src.models.prediction_model - INFO - kcue_20_2: 0.0291
+2025-04-12 23:35:16,352 - src.models.prediction_model - INFO - ics_26: 0.0290
+2025-04-12 23:35:16,372 - src.models.prediction_model - INFO - Model saved to models\SOL_USDT_random_forest_20250412_233516.joblib
+2025-04-12 23:35:16,372 - main - INFO - Model saved to models\SOL_USDT_random_forest_20250412_233516.joblib
+2025-04-12 23:35:18,482 - main - INFO - Making predictions
+2025-04-12 23:35:18,482 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 23:35:18,494 - src.models.prediction_model - INFO - Model loaded from models\SOL_USDT_random_forest_20250412_233516.joblib
+2025-04-12 23:35:18,505 - src.models.prediction_model - INFO - Made predictions for 500 samples
+2025-04-12 23:35:18,536 - src.utils.helpers - INFO - Saved DataFrame to results/SOL_USDT_1h_predictions_20250412_233518.csv
+2025-04-12 23:35:21,702 - main - INFO - Backtesting predictions
+2025-04-12 23:35:21,703 - src.utils.helpers - INFO - Calculated performance metrics: Accuracy=0.9540, F1=0.9510
+2025-04-12 23:35:21,703 - main - INFO - Performance metrics: {'accuracy': np.float64(0.954), 'precision': np.float64(0.9449152542372882), 'recall': np.float64(0.9570815450643777), 'f1_score': np.float64(0.9509594882729212), 'true_positives': np.int64(223), 'false_positives': np.int64(13), 'true_negatives': np.int64(254), 'false_negatives': np.int64(10)}
+2025-04-12 23:35:21,707 - src.utils.helpers - INFO - Calculated trading metrics: Win Rate=0.6398, Strategy Return=nan
+2025-04-12 23:35:21,707 - main - INFO - Trading metrics: {'total_trades': np.float64(77.0), 'winning_trades': np.int64(151), 'losing_trades': np.int64(85), 'win_rate': np.float64(0.6398305084745762), 'strategy_return': np.float64(nan), 'buy_hold_return': np.float64(nan), 'annualized_strategy_return': np.float64(nan), 'annualized_buy_hold_return': np.float64(nan), 'strategy_max_drawdown': np.float64(-0.0261778632037879), 'buy_hold_max_drawdown': np.float64(-0.33629648862681205), 'strategy_sharpe': np.float64(3.9614792604991584), 'buy_hold_sharpe': np.float64(0.11951446520403856)}
+2025-04-12 23:35:21,709 - src.utils.helpers - ERROR - Error saving configuration to results/SOL_USDT_1h_backtest_20250412_233521.json: Object of type int64 is not JSON serializable
+2025-04-12 23:35:23,823 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_all_20250412_233523.bat
+2025-04-12 23:35:23,830 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\SOL_USDT_1h_all_20250412_233523.bat
+2025-04-12 23:35:25,942 - src.analysis.local_llm - ERROR - Failed to import llama_cpp: No module named 'llama_cpp'
+2025-04-12 23:35:25,943 - src.analysis.local_llm - INFO - Please install llama-cpp-python: pip install llama-cpp-python
+2025-04-12 23:35:29,104 - src.analysis.local_llm - ERROR - LLM not initialized
+2025-04-12 23:40:25,532 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:40:25,535 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:40:26,862 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:40:26,866 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_234026.csv
+2025-04-12 23:40:42,871 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:40:42,874 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:40:44,163 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:40:44,167 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_234044.csv
+2025-04-12 23:40:47,332 - main - INFO - Performing technical analysis
+2025-04-12 23:40:47,332 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:40:47,342 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:40:47,386 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:40:47,409 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:40:47,412 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:40:47,413 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:40:47,423 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:40:47,442 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_234047.csv
+2025-04-12 23:40:47,442 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_234047.csv
+2025-04-12 23:40:49,030 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_analysis_20250412_234049.bat
+2025-04-12 23:40:49,037 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_analysis_20250412_234049.bat
+2025-04-12 23:41:21,242 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:41:21,246 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:41:22,554 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:41:22,558 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_234122.csv
+2025-04-12 23:41:25,196 - main - INFO - Performing technical analysis
+2025-04-12 23:41:25,196 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:41:25,200 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:41:25,241 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:41:25,262 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:41:25,264 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:41:25,265 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:41:25,275 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:41:25,294 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_234125.csv
+2025-04-12 23:41:25,295 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_234125.csv
+2025-04-12 23:41:29,507 - main - INFO - Training random_forest model
+2025-04-12 23:41:29,507 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 23:41:29,515 - src.models.prediction_model - INFO - Prepared features with 54 columns and 295 samples
+2025-04-12 23:41:29,522 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 23:41:29,665 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 23:41:29,665 - src.models.prediction_model - INFO - Accuracy: 0.8305
+2025-04-12 23:41:29,665 - src.models.prediction_model - INFO - Precision: 0.9091
+2025-04-12 23:41:29,666 - src.models.prediction_model - INFO - Recall: 0.8108
+2025-04-12 23:41:29,666 - src.models.prediction_model - INFO - F1 Score: 0.8571
+2025-04-12 23:41:29,671 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.73      0.86      0.79        22
+           1       0.91      0.81      0.86        37
+
+    accuracy                           0.83        59
+   macro avg       0.82      0.84      0.82        59
+weighted avg       0.84      0.83      0.83        59
+
+2025-04-12 23:41:29,677 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 23:41:29,678 - src.models.prediction_model - INFO - kcle_20_2: 0.0414
+2025-04-12 23:41:29,678 - src.models.prediction_model - INFO - vwap: 0.0410
+2025-04-12 23:41:29,678 - src.models.prediction_model - INFO - dmp_14: 0.0408
+2025-04-12 23:41:29,678 - src.models.prediction_model - INFO - bbu_20_2.0: 0.0377
+2025-04-12 23:41:29,679 - src.models.prediction_model - INFO - sma_50: 0.0357
+2025-04-12 23:41:29,679 - src.models.prediction_model - INFO - ics_26: 0.0327
+2025-04-12 23:41:29,679 - src.models.prediction_model - INFO - obv: 0.0323
+2025-04-12 23:41:29,679 - src.models.prediction_model - INFO - kcue_20_2: 0.0316
+2025-04-12 23:41:29,680 - src.models.prediction_model - INFO - its_9: 0.0300
+2025-04-12 23:41:29,680 - src.models.prediction_model - INFO - macds_12_26_9: 0.0282
+2025-04-12 23:41:29,710 - src.models.prediction_model - INFO - Model saved to models\BTC_USDT_random_forest_20250412_234129.joblib
+2025-04-12 23:41:29,710 - main - INFO - Model saved to models\BTC_USDT_random_forest_20250412_234129.joblib
+2025-04-12 23:41:41,456 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:41:41,458 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:41:42,845 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:41:42,849 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_234142.csv
+2025-04-12 23:41:45,487 - main - INFO - Performing technical analysis
+2025-04-12 23:41:45,487 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:41:45,491 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:41:45,532 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:41:45,552 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:41:45,555 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:41:45,556 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:41:45,565 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:41:45,584 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_234145.csv
+2025-04-12 23:41:45,584 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_234145.csv
+2025-04-12 23:41:47,694 - main - INFO - Making predictions
+2025-04-12 23:41:47,694 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 23:41:47,721 - src.models.prediction_model - INFO - Model loaded from models\BTC_USDT_random_forest_20250412_234129.joblib
+2025-04-12 23:41:47,737 - src.models.prediction_model - INFO - Made predictions for 300 samples
+2025-04-12 23:41:47,756 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_predictions_20250412_234147.csv
+2025-04-12 23:41:49,346 - src.ui.terminal_output - INFO - Terminal output script generated: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_prediction_20250412_234149.bat
+2025-04-12 23:41:49,353 - src.ui.terminal_output - INFO - Opened terminal with script: C:\Users\ADMINI~1\AppData\Local\Temp\BTC_USDT_1h_prediction_20250412_234149.bat
+2025-04-12 23:46:06,102 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:46:06,106 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:46:07,398 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:46:07,403 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_234607.csv
+2025-04-12 23:46:10,598 - main - INFO - Performing technical analysis
+2025-04-12 23:46:10,598 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:46:10,608 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:46:10,653 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:46:10,678 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:46:10,681 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:46:10,681 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:46:10,692 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:46:10,711 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_234610.csv
+2025-04-12 23:46:10,711 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_234610.csv
+2025-04-12 23:46:50,801 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:46:50,804 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:46:52,095 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:46:52,098 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_234652.csv
+2025-04-12 23:46:54,734 - main - INFO - Performing technical analysis
+2025-04-12 23:46:54,734 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:46:54,738 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:46:54,793 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:46:54,824 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:46:54,826 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:46:54,827 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:46:54,837 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:46:54,859 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_234654.csv
+2025-04-12 23:46:54,859 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_234654.csv
+2025-04-12 23:46:59,126 - main - INFO - Training random_forest model
+2025-04-12 23:46:59,127 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 23:46:59,135 - src.models.prediction_model - INFO - Prepared features with 54 columns and 295 samples
+2025-04-12 23:46:59,142 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-12 23:46:59,291 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-12 23:46:59,291 - src.models.prediction_model - INFO - Accuracy: 0.8305
+2025-04-12 23:46:59,291 - src.models.prediction_model - INFO - Precision: 0.9091
+2025-04-12 23:46:59,292 - src.models.prediction_model - INFO - Recall: 0.8108
+2025-04-12 23:46:59,292 - src.models.prediction_model - INFO - F1 Score: 0.8571
+2025-04-12 23:46:59,297 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.73      0.86      0.79        22
+           1       0.91      0.81      0.86        37
+
+    accuracy                           0.83        59
+   macro avg       0.82      0.84      0.82        59
+weighted avg       0.84      0.83      0.83        59
+
+2025-04-12 23:46:59,304 - src.models.prediction_model - INFO - Feature importances:
+2025-04-12 23:46:59,304 - src.models.prediction_model - INFO - kcle_20_2: 0.0414
+2025-04-12 23:46:59,304 - src.models.prediction_model - INFO - vwap: 0.0410
+2025-04-12 23:46:59,305 - src.models.prediction_model - INFO - dmp_14: 0.0408
+2025-04-12 23:46:59,305 - src.models.prediction_model - INFO - bbu_20_2.0: 0.0377
+2025-04-12 23:46:59,305 - src.models.prediction_model - INFO - sma_50: 0.0357
+2025-04-12 23:46:59,306 - src.models.prediction_model - INFO - ics_26: 0.0327
+2025-04-12 23:46:59,306 - src.models.prediction_model - INFO - obv: 0.0323
+2025-04-12 23:46:59,306 - src.models.prediction_model - INFO - kcue_20_2: 0.0316
+2025-04-12 23:46:59,307 - src.models.prediction_model - INFO - its_9: 0.0300
+2025-04-12 23:46:59,307 - src.models.prediction_model - INFO - macds_12_26_9: 0.0282
+2025-04-12 23:46:59,338 - src.models.prediction_model - INFO - Model saved to models\BTC_USDT_random_forest_20250412_234659.joblib
+2025-04-12 23:46:59,339 - main - INFO - Model saved to models\BTC_USDT_random_forest_20250412_234659.joblib
+2025-04-12 23:47:19,051 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:47:19,054 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:47:20,342 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:47:20,346 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_234720.csv
+2025-04-12 23:47:23,026 - main - INFO - Performing technical analysis
+2025-04-12 23:47:23,026 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-12 23:47:23,030 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-12 23:47:23,112 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-12 23:47:23,141 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-12 23:47:23,144 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-12 23:47:23,144 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-12 23:47:23,154 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-12 23:47:23,174 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250412_234723.csv
+2025-04-12 23:47:23,175 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250412_234723.csv
+2025-04-12 23:47:25,283 - main - INFO - Making predictions
+2025-04-12 23:47:25,283 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-12 23:47:25,314 - src.models.prediction_model - INFO - Model loaded from models\BTC_USDT_random_forest_20250412_234659.joblib
+2025-04-12 23:47:25,330 - src.models.prediction_model - INFO - Made predictions for 300 samples
+2025-04-12 23:47:25,352 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_predictions_20250412_234725.csv
+2025-04-12 23:52:45,254 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-12 23:52:45,258 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-12 23:52:46,620 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-12 23:52:46,624 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250412_235246.csv
+2025-04-13 00:03:20,193 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-13 00:03:20,196 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-13 00:03:21,483 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-13 00:03:21,487 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250413_000321.csv
+2025-04-13 00:03:30,739 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-13 00:03:30,743 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-13 00:03:32,043 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-13 00:03:32,046 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250413_000332.csv
+2025-04-13 00:03:35,209 - main - INFO - Performing technical analysis
+2025-04-13 00:03:35,209 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-13 00:03:35,218 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-13 00:03:35,260 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-13 00:03:35,284 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-13 00:03:35,287 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-13 00:03:35,288 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-13 00:03:35,298 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-13 00:03:35,316 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250413_000335.csv
+2025-04-13 00:03:35,316 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250413_000335.csv
+2025-04-13 00:03:49,147 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-13 00:03:49,150 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-13 00:03:50,453 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-13 00:03:50,457 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250413_000350.csv
+2025-04-13 00:03:53,093 - main - INFO - Performing technical analysis
+2025-04-13 00:03:53,093 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-13 00:03:53,097 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-13 00:03:53,138 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-13 00:03:53,158 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-13 00:03:53,160 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-13 00:03:53,161 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-13 00:03:53,170 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-13 00:03:53,189 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250413_000353.csv
+2025-04-13 00:03:53,189 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250413_000353.csv
+2025-04-13 00:03:57,399 - main - INFO - Training random_forest model
+2025-04-13 00:03:57,399 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-13 00:03:57,407 - src.models.prediction_model - INFO - Prepared features with 54 columns and 295 samples
+2025-04-13 00:03:57,413 - src.models.prediction_model - INFO - Training random_forest model...
+2025-04-13 00:03:57,552 - src.models.prediction_model - INFO - Model evaluation metrics:
+2025-04-13 00:03:57,553 - src.models.prediction_model - INFO - Accuracy: 0.8305
+2025-04-13 00:03:57,553 - src.models.prediction_model - INFO - Precision: 0.7750
+2025-04-13 00:03:57,553 - src.models.prediction_model - INFO - Recall: 0.9688
+2025-04-13 00:03:57,553 - src.models.prediction_model - INFO - F1 Score: 0.8611
+2025-04-13 00:03:57,558 - src.models.prediction_model - INFO - Classification Report:
+              precision    recall  f1-score   support
+
+           0       0.95      0.67      0.78        27
+           1       0.78      0.97      0.86        32
+
+    accuracy                           0.83        59
+   macro avg       0.86      0.82      0.82        59
+weighted avg       0.85      0.83      0.83        59
+
+2025-04-13 00:03:57,564 - src.models.prediction_model - INFO - Feature importances:
+2025-04-13 00:03:57,565 - src.models.prediction_model - INFO - obv: 0.0371
+2025-04-13 00:03:57,565 - src.models.prediction_model - INFO - dmp_14: 0.0358
+2025-04-13 00:03:57,565 - src.models.prediction_model - INFO - bbu_20_2.0: 0.0344
+2025-04-13 00:03:57,565 - src.models.prediction_model - INFO - macds_12_26_9: 0.0333
+2025-04-13 00:03:57,566 - src.models.prediction_model - INFO - kcle_20_2: 0.0332
+2025-04-13 00:03:57,566 - src.models.prediction_model - INFO - vwap: 0.0314
+2025-04-13 00:03:57,566 - src.models.prediction_model - INFO - sma_50: 0.0301
+2025-04-13 00:03:57,566 - src.models.prediction_model - INFO - ics_26: 0.0289
+2025-04-13 00:03:57,566 - src.models.prediction_model - INFO - ao: 0.0287
+2025-04-13 00:03:57,567 - src.models.prediction_model - INFO - roc_10: 0.0285
+2025-04-13 00:03:57,595 - src.models.prediction_model - INFO - Model saved to models\BTC_USDT_random_forest_20250413_000357.joblib
+2025-04-13 00:03:57,596 - main - INFO - Model saved to models\BTC_USDT_random_forest_20250413_000357.joblib
+2025-04-13 00:04:11,187 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-13 00:04:11,191 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-13 00:04:12,556 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-13 00:04:12,560 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250413_000412.csv
+2025-04-13 00:04:15,198 - main - INFO - Performing technical analysis
+2025-04-13 00:04:15,198 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-13 00:04:15,202 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-13 00:04:15,242 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-13 00:04:15,262 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-13 00:04:15,265 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-13 00:04:15,266 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-13 00:04:15,275 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-13 00:04:15,294 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250413_000415.csv
+2025-04-13 00:04:15,294 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250413_000415.csv
+2025-04-13 00:04:17,405 - main - INFO - Making predictions
+2025-04-13 00:04:17,405 - src.models.prediction_model - INFO - Initialized PredictionModel
+2025-04-13 00:04:17,431 - src.models.prediction_model - INFO - Model loaded from models\BTC_USDT_random_forest_20250413_000357.joblib
+2025-04-13 00:04:17,447 - src.models.prediction_model - INFO - Made predictions for 300 samples
+2025-04-13 00:04:17,466 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_predictions_20250413_000417.csv
+2025-04-13 00:11:13,573 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-13 00:11:13,576 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-13 00:11:14,862 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-13 00:11:14,866 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250413_001114.csv
+2025-04-13 00:11:18,060 - main - INFO - Performing technical analysis
+2025-04-13 00:11:18,060 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-13 00:11:18,070 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-13 00:11:18,113 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-13 00:11:18,137 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-13 00:11:18,140 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-13 00:11:18,141 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-13 00:11:18,151 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-13 00:11:18,172 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250413_001118.csv
+2025-04-13 00:11:18,172 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250413_001118.csv
+2025-04-13 00:38:46,335 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-13 00:38:46,338 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-13 00:38:47,660 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-13 00:38:47,664 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250413_003847.csv
+2025-04-13 00:38:47,667 - main - INFO - Performing technical analysis
+2025-04-13 00:38:47,667 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-13 00:38:47,677 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-13 00:38:47,719 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-13 00:38:47,743 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-13 00:38:47,746 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-13 00:38:47,747 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-13 00:38:47,758 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-13 00:38:47,777 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250413_003847.csv
+2025-04-13 00:38:47,778 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250413_003847.csv
+2025-04-13 00:38:51,015 - src.analysis.local_llm - ERROR - Failed to import huggingface_hub. Please install it: pip install huggingface_hub
+2025-04-13 00:38:51,015 - src.analysis.local_llm - ERROR - Failed to import llama_cpp: No module named 'huggingface_hub'
+2025-04-13 00:38:51,015 - src.analysis.local_llm - INFO - Please install llama-cpp-python: pip install llama-cpp-python
+2025-04-13 00:38:54,217 - src.analysis.local_llm - ERROR - LLM not initialized
+2025-04-13 00:38:54,219 - src.analysis.local_llm - INFO - Saved LLM analysis to results/BTC_USDT_1h_llm_analysis_20250413_003854.json
+2025-04-13 00:45:40,775 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-13 00:45:40,779 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-13 00:45:42,115 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-13 00:45:42,119 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250413_004542.csv
+2025-04-13 00:45:57,001 - main - INFO - Fetching data for BTC/USDT from coinbase
+2025-04-13 00:45:57,004 - src.data.data_fetcher - INFO - Successfully initialized coinbase exchange
+2025-04-13 00:45:58,315 - src.data.data_fetcher - INFO - Successfully fetched 300 candles for BTC/USDT
+2025-04-13 00:45:58,318 - src.utils.helpers - INFO - Saved DataFrame to data/BTC_USDT_1h_20250413_004558.csv
+2025-04-13 00:46:01,484 - main - INFO - Performing technical analysis
+2025-04-13 00:46:01,484 - src.analysis.technical_analysis - INFO - Initializing Technical Analyzer
+2025-04-13 00:46:01,494 - src.analysis.technical_analysis - INFO - Successfully added basic indicators
+2025-04-13 00:46:01,538 - src.analysis.technical_analysis - INFO - Successfully added advanced indicators
+2025-04-13 00:46:01,561 - src.analysis.custom_indicators - INFO - Successfully calculated squeeze_pro indicator
+2025-04-13 00:46:01,565 - src.analysis.technical_analysis - INFO - Successfully added custom indicators
+2025-04-13 00:46:01,566 - src.analysis.technical_analysis - WARNING - Dropping NaN values would result in empty DataFrame, keeping NaNs
+2025-04-13 00:46:01,576 - src.analysis.technical_analysis - INFO - Successfully generated trading signals
+2025-04-13 00:46:01,594 - src.utils.helpers - INFO - Saved DataFrame to results/BTC_USDT_1h_analysis_20250413_004601.csv
+2025-04-13 00:46:01,595 - main - INFO - Saved analysis results to results/BTC_USDT_1h_analysis_20250413_004601.csv

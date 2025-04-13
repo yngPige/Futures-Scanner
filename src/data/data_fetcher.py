@@ -23,12 +23,12 @@ logger = logging.getLogger(__name__)
 class DataFetcher:
     """Class to fetch cryptocurrency data from various sources."""
 
-    def __init__(self, exchange_id='binance', timeframe='1h'):
+    def __init__(self, exchange_id='coinbase', timeframe='1h'):
         """
         Initialize the DataFetcher.
 
         Args:
-            exchange_id (str): The exchange ID to use (default: 'binance')
+            exchange_id (str): The exchange ID to use (default: 'coinbase')
             timeframe (str): The timeframe to fetch data for (default: '1h')
         """
         self.timeframe = timeframe
@@ -172,7 +172,7 @@ class DataFetcher:
 # Example usage
 if __name__ == "__main__":
     # Initialize fetcher
-    fetcher = DataFetcher(exchange_id='binance', timeframe='1h')
+    fetcher = DataFetcher(exchange_id='coinbase', timeframe='1h')
 
     # Get available symbols
     symbols = fetcher.get_available_symbols()

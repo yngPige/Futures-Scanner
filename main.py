@@ -45,15 +45,15 @@ create_directory('charts')
 
 def parse_arguments():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Crypto Futures Scanner')
+    parser = argparse.ArgumentParser(description='3lacks Crypto Futures Scanner')
 
     # Mode arguments
     parser.add_argument('--mode', type=str, default='predict',
-                        choices=['fetch', 'analyze', 'train', 'predict', 'backtest', 'all'],
+                        choices=['fetch', 'analyze', 'train', 'predict', 'backtest', 'llm', 'all'],
                         help='Operation mode')
 
     # Data arguments
-    parser.add_argument('--exchange', type=str, default='binance',
+    parser.add_argument('--exchange', type=str, default='coinbase',
                         help='Exchange to fetch data from')
     parser.add_argument('--symbol', type=str, default='BTC/USDT',
                         help='Symbol to analyze')
@@ -70,6 +70,15 @@ def parse_arguments():
                         help='Path to saved model')
     parser.add_argument('--tune', action='store_true',
                         help='Tune model hyperparameters')
+
+    # LLM arguments
+    parser.add_argument('--use-llm', action='store_true',
+                        help='Use LLM for analysis')
+    parser.add_argument('--llm-model', type=str, default='llama3-8b',
+                        choices=['llama3-8b', 'llama3-70b', 'mistral-7b', 'phi3-mini'],
+                        help='LLM model to use')
+    parser.add_argument('--use-gpu', action='store_true',
+                        help='Use GPU for LLM inference')
 
     # Visualization arguments
     parser.add_argument('--theme', type=str, default='dark',
@@ -233,6 +242,56 @@ def backtest(df_with_predictions, args):
 
     return performance_metrics, trading_metrics
 
+def llm_analysis(df, args):
+    """Perform LLM analysis on market data."""
+    logger.info("Performing LLM analysis")
+
+    # Check if DataFrame is empty
+    if df.empty:
+        logger.warning("Empty DataFrame provided, cannot perform LLM analysis")
+        return None
+
+    try:
+        # Import LLM analyzer
+        from src.analysis.local_llm import LocalLLMAnalyzer, AVAILABLE_MODELS
+
+        # Set DataFrame attributes for better context
+        df.attrs["symbol"] = args.symbol
+        df.attrs["timeframe"] = args.timeframe
+
+        # Get model info
+        model_info = AVAILABLE_MODELS.get(args.llm_model, {})
+        model_name = model_info.get('name', args.llm_model)
+
+        # Configure GPU usage
+        n_gpu_layers = 0
+        if args.use_gpu:
+            logger.info("GPU acceleration enabled. Using GPU for inference.")
+            n_gpu_layers = -1  # Use all layers on GPU
+
+        # Initialize LLM analyzer
+        logger.info(f"Initializing local LLM analyzer with model {args.llm_model}")
+        llm_analyzer = LocalLLMAnalyzer(
+            model_name=model_name,
+            n_gpu_layers=n_gpu_layers
+        )
+
+        # Perform LLM analysis
+        logger.info("Analyzing market data with local LLM...")
+        recommendation = llm_analyzer.analyze(df)
+
+        # Save analysis if requested
+        if args.save and "error" not in recommendation:
+            filename = llm_analyzer.save_analysis(recommendation, args.symbol, args.timeframe)
+            if filename:
+                logger.info(f"Saved LLM analysis to {filename}")
+
+        return recommendation
+
+    except Exception as e:
+        logger.error(f"Error performing LLM analysis: {e}")
+        return {"error": str(e)}
+
 def visualize(df, args, metrics=None):
     """Generate visualizations."""
     logger.info("Generating visualizations")
@@ -351,6 +410,33 @@ def main():
                     performance_metrics, trading_metrics = backtest(df_predictions, args)
                     visualize(df_predictions, args, metrics=(performance_metrics, trading_metrics))
 
+    elif args.mode == 'llm':
+        # Check if LLM analysis is enabled
+        if not args.use_llm:
+            logger.error("LLM analysis is not enabled. Use --use-llm flag.")
+            return
+
+        # Fetch data
+        df = fetch_data(args)
+        if df is None:
+            return
+
+        # Analyze data
+        df_analyzed = analyze_data(df, args)
+        if df_analyzed is None:
+            return
+
+        # Perform LLM analysis
+        recommendation = llm_analysis(df_analyzed, args)
+
+        if recommendation and "error" not in recommendation:
+            logger.info(f"LLM Analysis Recommendation: {recommendation['recommendation']}")
+            logger.info(f"Risk Assessment: {recommendation['risk']}")
+            logger.info("Analysis complete. Check results file for details.")
+        else:
+            error_msg = recommendation.get("error", "Unknown error") if recommendation else "Failed to get recommendation"
+            logger.error(f"LLM analysis failed: {error_msg}")
+
     elif args.mode == 'all':
         # Fetch data
         df = fetch_data(args)
@@ -377,6 +463,18 @@ def main():
 
         # Visualize
         visualize(df_predictions, args, metrics=(performance_metrics, trading_metrics))
+
+        # Perform LLM analysis if enabled
+        if args.use_llm:
+            logger.info("Performing LLM analysis...")
+            recommendation = llm_analysis(df_analyzed, args)
+
+            if recommendation and "error" not in recommendation:
+                logger.info(f"LLM Analysis Recommendation: {recommendation['recommendation']}")
+                logger.info(f"Risk Assessment: {recommendation['risk']}")
+            else:
+                error_msg = recommendation.get("error", "Unknown error") if recommendation else "Failed to get recommendation"
+                logger.warning(f"LLM analysis failed: {error_msg}")
 
         logger.info("Successfully completed all operations")
 
