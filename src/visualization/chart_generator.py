@@ -13,6 +13,8 @@ import mplfinance as mpf
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import logging
+import json
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -709,6 +711,185 @@ class ChartGenerator:
 
         except Exception as e:
             logger.error(f"Error creating interactive chart: {e}")
+            return None
+
+    def create_advanced_chart_with_suggestions(self, df, llm_analysis=None, title='Advanced Trading Chart', include_volume=True):
+        """
+        Create an advanced interactive chart with entry/exit suggestions based on LLM analysis.
+
+        Args:
+            df (pd.DataFrame): DataFrame with price data and indicators
+            llm_analysis (dict, optional): LLM analysis results with trading recommendations
+            title (str): Chart title
+            include_volume (bool): Whether to include volume chart
+
+        Returns:
+            plotly.graph_objects.Figure: The generated figure
+        """
+        if df.empty:
+            logger.warning("Empty DataFrame provided, cannot create advanced chart")
+            return None
+
+        try:
+            # Create a base interactive chart first
+            fig = self.create_interactive_chart(df, title, include_volume)
+            if fig is None:
+                return None
+
+            # If LLM analysis is provided, add entry/exit suggestions
+            if llm_analysis and isinstance(llm_analysis, dict) and 'error' not in llm_analysis:
+                # Get the latest price
+                latest_price = df['close'].iloc[-1]
+                latest_date = df.index[-1]
+
+                # Extract entry/exit levels from LLM analysis
+                entry_price = llm_analysis.get('entry_price')
+                stop_loss = llm_analysis.get('stop_loss')
+                take_profit = llm_analysis.get('take_profit')
+                recommendation = llm_analysis.get('recommendation', 'NEUTRAL')
+                risk = llm_analysis.get('risk', 'MEDIUM')
+
+                # Add entry price line if available
+                if entry_price and isinstance(entry_price, (int, float)):
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[df.index[0], df.index[-1]],
+                            y=[entry_price, entry_price],
+                            name='Entry Price',
+                            line=dict(color='yellow', width=2, dash='dash'),
+                            opacity=0.7
+                        ),
+                        row=1, col=1
+                    )
+
+                    # Add entry price annotation
+                    fig.add_annotation(
+                        x=df.index[-1],
+                        y=entry_price,
+                        text=f"Entry: {entry_price:.2f}",
+                        showarrow=True,
+                        arrowhead=2,
+                        arrowcolor='yellow',
+                        arrowsize=1,
+                        arrowwidth=2,
+                        ax=70,
+                        ay=0,
+                        font=dict(color='yellow', size=12),
+                        row=1, col=1
+                    )
+
+                # Add stop loss line if available
+                if stop_loss and isinstance(stop_loss, (int, float)):
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[df.index[0], df.index[-1]],
+                            y=[stop_loss, stop_loss],
+                            name='Stop Loss',
+                            line=dict(color='red', width=2, dash='dash'),
+                            opacity=0.7
+                        ),
+                        row=1, col=1
+                    )
+
+                    # Add stop loss annotation
+                    fig.add_annotation(
+                        x=df.index[-1],
+                        y=stop_loss,
+                        text=f"Stop: {stop_loss:.2f}",
+                        showarrow=True,
+                        arrowhead=2,
+                        arrowcolor='red',
+                        arrowsize=1,
+                        arrowwidth=2,
+                        ax=70,
+                        ay=0,
+                        font=dict(color='red', size=12),
+                        row=1, col=1
+                    )
+
+                # Add take profit line if available
+                if take_profit and isinstance(take_profit, (int, float)):
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[df.index[0], df.index[-1]],
+                            y=[take_profit, take_profit],
+                            name='Take Profit',
+                            line=dict(color='green', width=2, dash='dash'),
+                            opacity=0.7
+                        ),
+                        row=1, col=1
+                    )
+
+                    # Add take profit annotation
+                    fig.add_annotation(
+                        x=df.index[-1],
+                        y=take_profit,
+                        text=f"Target: {take_profit:.2f}",
+                        showarrow=True,
+                        arrowhead=2,
+                        arrowcolor='green',
+                        arrowsize=1,
+                        arrowwidth=2,
+                        ax=70,
+                        ay=0,
+                        font=dict(color='green', size=12),
+                        row=1, col=1
+                    )
+
+                # Add recommendation and risk as a text annotation
+                fig.add_annotation(
+                    x=df.index[0],
+                    y=df['high'].max(),
+                    text=f"Recommendation: {recommendation} | Risk: {risk}",
+                    showarrow=False,
+                    font=dict(
+                        size=14,
+                        color='white' if self.theme == 'dark' else 'black'
+                    ),
+                    bgcolor='rgba(0,0,0,0.5)' if self.theme == 'dark' else 'rgba(255,255,255,0.5)',
+                    bordercolor='gray',
+                    borderwidth=1,
+                    borderpad=4,
+                    align='left',
+                    xanchor='left',
+                    yanchor='top',
+                    row=1, col=1
+                )
+
+                # Calculate risk-reward ratio if both stop loss and take profit are available
+                if stop_loss and take_profit and entry_price and isinstance(stop_loss, (int, float)) and isinstance(take_profit, (int, float)) and isinstance(entry_price, (int, float)):
+                    risk_amount = abs(entry_price - stop_loss)
+                    reward_amount = abs(take_profit - entry_price)
+                    if risk_amount > 0:
+                        risk_reward_ratio = reward_amount / risk_amount
+
+                        # Add risk-reward ratio annotation
+                        fig.add_annotation(
+                            x=df.index[len(df.index) // 2],
+                            y=df['low'].min(),
+                            text=f"Risk-Reward Ratio: {risk_reward_ratio:.2f}",
+                            showarrow=False,
+                            font=dict(
+                                size=12,
+                                color='white' if self.theme == 'dark' else 'black'
+                            ),
+                            bgcolor='rgba(0,0,0,0.5)' if self.theme == 'dark' else 'rgba(255,255,255,0.5)',
+                            bordercolor='gray',
+                            borderwidth=1,
+                            borderpad=4,
+                            align='center',
+                            xanchor='center',
+                            yanchor='bottom',
+                            row=1, col=1
+                        )
+
+            logger.info("Created advanced chart with entry/exit suggestions")
+            return fig
+
+        except Exception as e:
+            logger.error(f"Error creating advanced chart: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def plot_model_performance(self, actual, predicted, title='Model Performance', save_path=None):

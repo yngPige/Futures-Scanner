@@ -293,7 +293,7 @@ def llm_analysis(df, args):
         logger.error(f"Error performing LLM analysis: {e}")
         return {"error": str(e)}
 
-def visualize(df, args, metrics=None):
+def visualize(df, args, metrics=None, llm_recommendation=None):
     """Generate visualizations."""
     logger.info("Generating visualizations")
 
@@ -305,12 +305,25 @@ def visualize(df, args, metrics=None):
     # Initialize chart generator
     chart_gen = ChartGenerator(theme=args.theme)
 
+    # Check if we have LLM recommendations and should use advanced chart
+    use_advanced_chart = args.interactive and llm_recommendation and 'error' not in llm_recommendation
+
     # Generate charts
     if args.interactive:
-        fig = chart_gen.create_interactive_chart(
-            df,
-            title=f"{args.symbol} - {args.timeframe} Timeframe"
-        )
+        if use_advanced_chart:
+            # Use advanced chart with entry/exit suggestions
+            logger.info("Creating advanced chart with entry/exit suggestions")
+            fig = chart_gen.create_advanced_chart_with_suggestions(
+                df,
+                llm_analysis=llm_recommendation,
+                title=f"{args.symbol} - {args.timeframe} Timeframe with Trading Levels"
+            )
+        else:
+            # Use regular interactive chart
+            fig = chart_gen.create_interactive_chart(
+                df,
+                title=f"{args.symbol} - {args.timeframe} Timeframe"
+            )
 
         # Check if figure was created successfully
         if fig is None:
@@ -320,9 +333,10 @@ def visualize(df, args, metrics=None):
         # Save chart if requested
         if args.save:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"charts/{args.symbol.replace('/', '_')}_{args.timeframe}_interactive_{timestamp}.html"
+            chart_type = "advanced" if use_advanced_chart else "interactive"
+            filename = f"charts/{args.symbol.replace('/', '_')}_{args.timeframe}_{chart_type}_{timestamp}.html"
             pio.write_html(fig, file=filename)
-            logger.info(f"Saved interactive chart to {filename}")
+            logger.info(f"Saved {chart_type} chart to {filename}")
 
         # Display chart if requested
         if not args.no_display:
@@ -395,7 +409,23 @@ def main():
                 df_predictions = predict(df_analyzed, args.model_path, args)
                 if df_predictions is not None:
                     logger.info("Successfully made predictions")
-                    visualize(df_predictions, args)
+
+                    # Perform LLM analysis if enabled
+                    recommendation = None
+                    if args.use_llm:
+                        logger.info("Performing LLM analysis...")
+                        recommendation = llm_analysis(df_analyzed, args)
+
+                        if recommendation and "error" not in recommendation:
+                            logger.info(f"LLM Analysis Recommendation: {recommendation['recommendation']}")
+                            logger.info(f"Risk Assessment: {recommendation['risk']}")
+                        else:
+                            error_msg = recommendation.get("error", "Unknown error") if recommendation else "Failed to get recommendation"
+                            logger.warning(f"LLM analysis failed: {error_msg}")
+                            recommendation = None
+
+                    # Visualize with LLM recommendations if available
+                    visualize(df_predictions, args, llm_recommendation=recommendation)
 
     elif args.mode == 'backtest':
         if args.model_path is None:
@@ -409,7 +439,23 @@ def main():
                 df_predictions = predict(df_analyzed, args.model_path, args)
                 if df_predictions is not None:
                     performance_metrics, trading_metrics = backtest(df_predictions, args)
-                    visualize(df_predictions, args, metrics=(performance_metrics, trading_metrics))
+
+                    # Perform LLM analysis if enabled
+                    recommendation = None
+                    if args.use_llm:
+                        logger.info("Performing LLM analysis...")
+                        recommendation = llm_analysis(df_analyzed, args)
+
+                        if recommendation and "error" not in recommendation:
+                            logger.info(f"LLM Analysis Recommendation: {recommendation['recommendation']}")
+                            logger.info(f"Risk Assessment: {recommendation['risk']}")
+                        else:
+                            error_msg = recommendation.get("error", "Unknown error") if recommendation else "Failed to get recommendation"
+                            logger.warning(f"LLM analysis failed: {error_msg}")
+                            recommendation = None
+
+                    # Visualize with LLM recommendations if available
+                    visualize(df_predictions, args, metrics=(performance_metrics, trading_metrics), llm_recommendation=recommendation)
 
     elif args.mode == 'llm':
         # Check if LLM analysis is enabled
@@ -433,10 +479,17 @@ def main():
         if recommendation and "error" not in recommendation:
             logger.info(f"LLM Analysis Recommendation: {recommendation['recommendation']}")
             logger.info(f"Risk Assessment: {recommendation['risk']}")
+
+            # Generate visualization with entry/exit suggestions
+            visualize(df_analyzed, args, llm_recommendation=recommendation)
+
             logger.info("Analysis complete. Check results file for details.")
         else:
             error_msg = recommendation.get("error", "Unknown error") if recommendation else "Failed to get recommendation"
             logger.error(f"LLM analysis failed: {error_msg}")
+
+            # Generate regular visualization without suggestions
+            visualize(df_analyzed, args)
 
     elif args.mode == 'all':
         # Fetch data
@@ -462,10 +515,8 @@ def main():
         # Backtest
         performance_metrics, trading_metrics = backtest(df_predictions, args)
 
-        # Visualize
-        visualize(df_predictions, args, metrics=(performance_metrics, trading_metrics))
-
         # Perform LLM analysis if enabled
+        recommendation = None
         if args.use_llm:
             logger.info("Performing LLM analysis...")
             recommendation = llm_analysis(df_analyzed, args)
@@ -476,6 +527,10 @@ def main():
             else:
                 error_msg = recommendation.get("error", "Unknown error") if recommendation else "Failed to get recommendation"
                 logger.warning(f"LLM analysis failed: {error_msg}")
+                recommendation = None
+
+        # Visualize with LLM recommendations if available
+        visualize(df_predictions, args, metrics=(performance_metrics, trading_metrics), llm_recommendation=recommendation)
 
         logger.info("Successfully completed all operations")
 
