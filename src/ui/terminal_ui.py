@@ -12,19 +12,18 @@ import argparse
 from datetime import datetime
 from colorama import init, Fore, Back, Style
 from src.ui.terminal_output import TerminalOutputGenerator
+from src.config import get_pybloat_path, pybloat_file_exists, PYBLOAT_DIR
+
+# No keyboard module needed anymore
 
 # Initialize colorama
 init()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("crypto_scanner.log"),
-        logging.StreamHandler()
-    ]
-)
+# Configure logging using custom logging utility
+from src.utils.logging_utils import configure_logging
+
+# Configure logging to only show errors in console and save to error log file
+configure_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -32,6 +31,13 @@ logger = logging.getLogger(__name__)
 
 class TerminalUI:
     """Terminal-based user interface for Crypto Futures Scanner."""
+
+    def _import_from_pybloat(self):
+        """Import main module from PyBloat directory."""
+        import sys
+        # Add PyBloat directory to sys.path if not already there
+        if PYBLOAT_DIR not in sys.path:
+            sys.path.insert(0, PYBLOAT_DIR)
 
     def __init__(self):
         """Initialize the Terminal UI."""
@@ -43,15 +49,15 @@ class TerminalUI:
             'symbol': 'BTC/USDT',
             'timeframe': '1h',
             'limit': 500,
-            'exchange': 'coinbase',
+            'exchange': 'kraken',  # Changed default to kraken
             'model_type': 'random_forest',
             'model_path': None,
             'theme': 'dark',
             'save': True,
             'tune': False,
-            'use_llm': False,
+            'use_llm': True,  # LLM Analysis enabled by default
             'llm_model': 'llama3-8b',
-            'use_gpu': False
+            'use_gpu': True   # GPU Acceleration enabled by default
         }
 
         # Track completed functions
@@ -98,16 +104,31 @@ class TerminalUI:
             'dark', 'light'
         ]
 
+        self.available_exchanges = [
+            'CCXT:ALL', 'kraken', 'kucoin', 'huobi'
+        ]
+
         # Load available models
         self.refresh_available_models()
 
     def refresh_available_models(self):
         """Refresh the list of available models."""
         self.available_models = []
+
+        # Check for models in the current directory
         if os.path.exists('models'):
             for file in os.listdir('models'):
                 if file.endswith('.joblib') and not file.endswith('_scaler.joblib') and not file.endswith('_features.joblib'):
                     self.available_models.append(os.path.join('models', file))
+
+        # Check for models in the PyBloat directory
+        pybloat_models_dir = os.path.join(PYBLOAT_DIR, 'models')
+        if os.path.exists(pybloat_models_dir):
+            for file in os.listdir(pybloat_models_dir):
+                if file.endswith('.joblib') and not file.endswith('_scaler.joblib') and not file.endswith('_features.joblib'):
+                    model_path = os.path.join(pybloat_models_dir, file)
+                    if model_path not in self.available_models:
+                        self.available_models.append(model_path)
 
     def clear_screen(self):
         """Clear the terminal screen."""
@@ -142,9 +163,13 @@ class TerminalUI:
                     print(f"  {key}: {value}")
             print()
 
+    # Toggle key handling is now done directly in the settings menu
+
     def get_input(self, prompt):
         """Get input from the user with the given prompt."""
-        return input(Fore.GREEN + prompt + Style.RESET_ALL)
+        # Get input from user
+        user_input = input(Fore.GREEN + prompt + Style.RESET_ALL)
+        return user_input
 
     def print_success(self, message):
         """Print a success message."""
@@ -166,7 +191,7 @@ class TerminalUI:
         """Wait for the user to press a key."""
         input(Fore.GREEN + "\nPress Enter to continue..." + Style.RESET_ALL)
 
-    def show_loading_animation(self, message, duration=3, width=50, log_messages=None):
+    def show_loading_animation(self, message, duration=3, width=50, log_messages=None, compact_completion=False):
         """Show an enhanced loading bar animation with cool logs.
 
         Args:
@@ -174,6 +199,7 @@ class TerminalUI:
             duration (int): Duration of the animation in seconds
             width (int): Width of the loading bar
             log_messages (list, optional): List of log messages to display during animation
+            compact_completion (bool): Whether to use compact spacing after completion
         """
         # Initialize collected_logs if it doesn't exist
         if not hasattr(self, 'collected_logs'):
@@ -301,8 +327,9 @@ class TerminalUI:
         # Add completion log
         self.collected_logs.append((timestamp, f"✓ {message} completed!"))
 
-        # Clear the log display area
-        for _ in range(log_display_height):
+        # Clear the log display area - use fewer lines if compact_completion is True
+        clear_lines = 1 if compact_completion else log_display_height
+        for _ in range(clear_lines):
             print("\r\033[K")
 
     def print_menu_with_settings(self, menu_items, title=None):
@@ -376,32 +403,7 @@ class TerminalUI:
             # Print the line with proper spacing
             print(f"{menu_str}{' ' * (max_menu_length - len(menu_str.replace(Fore.GREEN, '').replace(Style.RESET_ALL, '').replace('✓', '')))}  {settings_str}")
 
-        # Display toggle indicators at the bottom
-        self.print_toggle_indicators()
-
-    def print_toggle_indicators(self):
-        """Print toggle indicators at the bottom of the screen."""
-        # Create toggle indicators with hotkeys in brackets
-        toggles = [
-            ("g", "GPU Acceleration", self.settings['use_gpu']),
-            ("s", "Save Results", self.settings['save']),
-            ("t", "Hyperparameter Tuning", self.settings['tune']),
-            ("l", "LLM Analysis", self.settings['use_llm'])
-        ]
-
-        # Add a separator line
-        print("\n" + "-" * 80)
-
-        # Print each toggle indicator on its own
-        for key, desc, enabled in toggles:
-            # Use green text for the entire option if the toggle is enabled
-            if enabled:
-                print(f"[{Fore.GREEN}{key}{Style.RESET_ALL}] {Fore.GREEN}{desc}{Style.RESET_ALL}", end="  ")
-            else:
-                print(f"[{key}] {desc}", end="  ")
-
-        # Add a newline at the end
-        print()
+    # Toggle indicators are now shown directly in the settings menu
 
     def main_menu(self):
         """Display the main menu."""
@@ -446,23 +448,6 @@ class TerminalUI:
         elif choice.lower() == 'q':
             self.show_exit_screen()
             self.running = False
-        # Handle toggle hotkeys
-        elif choice.lower() == 'g':
-            self.settings['use_gpu'] = not self.settings['use_gpu']
-            self.print_success(f"GPU Acceleration {'enabled' if self.settings['use_gpu'] else 'disabled'}.")
-            time.sleep(1)
-        elif choice.lower() == 's':
-            self.settings['save'] = not self.settings['save']
-            self.print_success(f"Save Results {'enabled' if self.settings['save'] else 'disabled'}.")
-            time.sleep(1)
-        elif choice.lower() == 't':
-            self.settings['tune'] = not self.settings['tune']
-            self.print_success(f"Hyperparameter Tuning {'enabled' if self.settings['tune'] else 'disabled'}.")
-            time.sleep(1)
-        elif choice.lower() == 'l':
-            self.settings['use_llm'] = not self.settings['use_llm']
-            self.print_success(f"LLM Analysis {'enabled' if self.settings['use_llm'] else 'disabled'}.")
-            time.sleep(1)
         else:
             self.print_error("Invalid choice. Please try again.")
             time.sleep(1)
@@ -478,8 +463,27 @@ class TerminalUI:
             ("6", "Select Model Path"),
             ("7", "Change Theme"),
             ("8", "Change LLM Model"),
+            ("g", "Toggle GPU Acceleration"),
+            ("s", "Toggle Save Results"),
+            ("t", "Toggle Hyperparameter Tuning"),
+            ("l", "Toggle LLM Analysis"),
             ("b", "Back to Main Menu")
         ]
+
+        # Update toggle options text with current state
+        for i, (key, _) in enumerate(menu_items):
+            if key == 'g':
+                status = f"{Fore.GREEN}ON{Style.RESET_ALL}" if self.settings['use_gpu'] else "OFF"
+                menu_items[i] = (key, f"Toggle GPU Acceleration [{status}]")
+            elif key == 's':
+                status = f"{Fore.GREEN}ON{Style.RESET_ALL}" if self.settings['save'] else "OFF"
+                menu_items[i] = (key, f"Toggle Save Results [{status}]")
+            elif key == 't':
+                status = f"{Fore.GREEN}ON{Style.RESET_ALL}" if self.settings['tune'] else "OFF"
+                menu_items[i] = (key, f"Toggle Hyperparameter Tuning [{status}]")
+            elif key == 'l':
+                status = f"{Fore.GREEN}ON{Style.RESET_ALL}" if self.settings['use_llm'] else "OFF"
+                menu_items[i] = (key, f"Toggle LLM Analysis [{status}]")
 
         self.print_menu_with_settings(menu_items, "3lacks Scanner - Settings")
 
@@ -501,7 +505,6 @@ class TerminalUI:
             self.change_theme()
         elif choice == '8':
             self.change_llm_model()
-        # Handle toggle hotkeys
         elif choice.lower() == 'g':
             self.settings['use_gpu'] = not self.settings['use_gpu']
             self.print_success(f"GPU Acceleration {'enabled' if self.settings['use_gpu'] else 'disabled'}.")
@@ -525,51 +528,35 @@ class TerminalUI:
             time.sleep(1)
 
     def change_symbol(self):
-        """Change the symbol setting."""
+        """Change the symbol setting using the symbol selector popup."""
         self.print_header("Change Symbol")
+        self.print_info("Opening symbol selector...")
 
-        # Group symbols by quote currency for better organization
-        print("Available symbols:")
+        # Import the symbol selector
+        from src.ui.symbol_selector import select_symbol
 
-        # Create a display list for easier selection
-        display_symbols = []
+        # Show the symbol selector popup
+        symbol, exchange, cancelled = select_symbol(
+            current_symbol=self.settings['symbol'],
+            current_exchange=self.settings['exchange']
+        )
 
-        # First, organize by quote currency
-        for quote_format in self.quote_formats:
-            quote = quote_format['quote']
-            print(f"\n{quote} pairs:")
+        # If the selection was not cancelled, update the settings
+        if not cancelled and symbol:
+            # Store the current exchange for comparison
+            current_exchange = self.settings['exchange']
 
-            # Filter symbols for this quote currency
-            # For USD pairs, we need to be more specific to avoid showing USDT pairs
-            if quote == 'USD':
-                quote_symbols = [s for s in self.available_symbols if s.endswith(f'-{quote}')]
+            # Update settings
+            self.settings['symbol'] = symbol
+
+            # If the exchange was changed, update it too
+            if exchange != current_exchange:
+                self.settings['exchange'] = exchange
+                self.print_success(f"Symbol changed to {symbol} and exchange changed to {exchange}.")
             else:
-                quote_symbols = [s for s in self.available_symbols if s.endswith(f'/{quote}')]
-            quote_symbols.sort()  # Sort alphabetically
-
-            # Display symbols for this quote currency
-            for symbol in quote_symbols:
-                display_symbols.append(symbol)
-                print(f"{len(display_symbols)}. {symbol}")
-
-        print(f"\nCurrent symbol: {self.settings['symbol']}")
-
-        choice = self.get_input("\nEnter symbol number or custom symbol (or 'b' to go back): ")
-
-        if choice.lower() == 'b':
-            return
-
-        try:
-            index = int(choice) - 1
-            if 0 <= index < len(display_symbols):
-                self.settings['symbol'] = display_symbols[index]
-                self.print_success(f"Symbol changed to {self.settings['symbol']}.")
-            else:
-                self.print_error("Invalid choice. Please try again.")
-        except ValueError:
-            # Custom symbol
-            self.settings['symbol'] = choice
-            self.print_success(f"Symbol changed to {self.settings['symbol']}.")
+                self.print_success(f"Symbol changed to {symbol}.")
+        else:
+            self.print_info("Symbol selection cancelled.")
 
         time.sleep(1)
 
@@ -630,28 +617,53 @@ class TerminalUI:
         self.print_header("Change Exchange")
 
         print("Available exchanges:")
-        exchanges = ['coinbase', 'kraken', 'kucoin', 'huobi', 'bybit']
-        for i, exchange in enumerate(exchanges, 1):
+        for i, exchange in enumerate(self.available_exchanges, 1):
             print(f"{i}. {exchange}")
 
         print(f"\nCurrent exchange: {self.settings['exchange']}")
 
-        choice = self.get_input("\nEnter exchange number or custom exchange (or 'b' to go back): ")
+        choice = self.get_input("\nEnter exchange number or custom exchange (or 's' to use symbol selector, 'b' to go back): ")
 
         if choice.lower() == 'b':
             return
+        elif choice.lower() == 's':
+            # Use the symbol selector to change both symbol and exchange
+            self.print_info("Opening symbol selector...")
 
-        try:
-            index = int(choice) - 1
-            if 0 <= index < len(exchanges):
-                self.settings['exchange'] = exchanges[index]
-                self.print_success(f"Exchange changed to {self.settings['exchange']}.")
+            # Import the symbol selector
+            from src.ui.symbol_selector import select_symbol
+
+            # Show the symbol selector popup
+            symbol, exchange, cancelled = select_symbol(
+                current_symbol=self.settings['symbol'],
+                current_exchange=self.settings['exchange']
+            )
+
+            # If the selection was not cancelled, update the settings
+            if not cancelled:
+                # Update exchange
+                if exchange != self.settings['exchange']:
+                    self.settings['exchange'] = exchange
+                    self.print_success(f"Exchange changed to {exchange}.")
+
+                # Update symbol if it was changed
+                if symbol and symbol != self.settings['symbol']:
+                    self.settings['symbol'] = symbol
+                    self.print_success(f"Symbol changed to {symbol}.")
             else:
-                self.print_error("Invalid choice. Please try again.")
-        except ValueError:
-            # Custom exchange
-            self.settings['exchange'] = choice
-            self.print_success(f"Exchange changed to {self.settings['exchange']}.")
+                self.print_info("Selection cancelled.")
+        else:
+            try:
+                index = int(choice) - 1
+                if 0 <= index < len(self.available_exchanges):
+                    self.settings['exchange'] = self.available_exchanges[index]
+                    self.print_success(f"Exchange changed to {self.settings['exchange']}.")
+                else:
+                    self.print_error("Invalid choice. Please try again.")
+            except ValueError:
+                # Custom exchange
+                self.settings['exchange'] = choice
+                self.print_success(f"Exchange changed to {self.settings['exchange']}.")
 
         time.sleep(1)
 
@@ -659,9 +671,16 @@ class TerminalUI:
         """Change the model type setting."""
         self.print_header("Change Model Type")
 
+        # Model type descriptions
+        model_descriptions = {
+            'random_forest': "Ensemble of decision trees; robust to overfitting; handles non-linear patterns well.",
+            'gradient_boosting': "Sequential ensemble that corrects previous errors; higher accuracy but more prone to overfitting."
+        }
+
         print("Available model types:")
         for i, model_type in enumerate(self.available_model_types, 1):
-            print(f"{i}. {model_type}")
+            description = model_descriptions.get(model_type, "")
+            print(f"{i}. {model_type} - {description}")
 
         print(f"\nCurrent model type: {self.settings['model_type']}")
 
@@ -875,7 +894,7 @@ class TerminalUI:
             bool: True if all dependencies are installed or successfully installed, False otherwise
         """
         try:
-            from src.analysis.local_llm import check_dependencies, install_dependencies, REQUIRED_PACKAGES
+            from src.analysis.local_llm import check_dependencies, install_dependencies
 
             all_installed, missing_packages = check_dependencies()
             if all_installed:
@@ -943,7 +962,7 @@ class TerminalUI:
             import requests
             import threading
             import time
-            from tqdm import tqdm
+            # Import necessary modules
             from huggingface_hub import hf_hub_download
 
             # Get model info
@@ -963,10 +982,22 @@ class TerminalUI:
             # Full path to save the model
             model_file_path = os.path.join(model_dir, model_name)
 
-            # Check if model already exists
-            if os.path.exists(model_file_path):
+            # Check if model already exists and has a reasonable size (at least 1MB)
+            if os.path.exists(model_file_path) and os.path.getsize(model_file_path) > 1000000:
+                file_size_gb = os.path.getsize(model_file_path) / (1024 * 1024 * 1024)
                 self.print_info(f"Model already exists at {model_file_path}")
+                self.print_info(f"Model file size: {file_size_gb:.2f} GB")
                 return True
+
+            # If file exists but is too small (likely a failed download), remove it
+            if os.path.exists(model_file_path) and os.path.getsize(model_file_path) <= 1000000:
+                self.print_warning(f"Found incomplete model file at {model_file_path}")
+                self.print_warning(f"File size: {os.path.getsize(model_file_path) / (1024*1024):.2f} MB is too small")
+                self.print_info("Removing incomplete file and downloading again...")
+                try:
+                    os.remove(model_file_path)
+                except Exception as e:
+                    self.print_error(f"Failed to remove incomplete file: {str(e)}")
 
             # Show download information
             self.print_header(f"Downloading {model_key}")
@@ -1225,6 +1256,8 @@ class TerminalUI:
         self.print_header("Fetching Data")
 
         try:
+            # Import main from PyBloat directory
+            self._import_from_pybloat()
             from main import fetch_data
 
             args = self.build_command_args()
@@ -1232,14 +1265,19 @@ class TerminalUI:
             self.print_info(f"Fetching data for {args.symbol} from {args.exchange}...")
 
             # Show loading animation while fetching data
-            self.show_loading_animation("Retrieving market data", duration=2)
+            self.show_loading_animation("Retrieving market data", duration=2, compact_completion=True)
 
             df = fetch_data(args)
 
             if df is not None:
                 self.print_success(f"Successfully fetched {len(df)} rows of data.")
                 self.print_info(f"Time range: {df.index.min()} to {df.index.max()}")
-                self.print_info(f"Latest price: {df['close'].iloc[-1]:.2f}")
+                self.print_info(f"Latest price: {df['close'].iloc[-1]:.5f}")
+
+                # Display which exchange was actually used (for CCXT:ALL mode)
+                if 'exchange' in df.attrs and df.attrs['exchange'] != self.settings['exchange']:
+                    self.print_info(f"Data fetched from {df.attrs['exchange']} exchange")
+
                 # Mark this function as completed
                 self.completed_functions['fetch_data'] = True
             else:
@@ -1255,6 +1293,8 @@ class TerminalUI:
         self.print_header("Analyzing Data")
 
         try:
+            # Import main from PyBloat directory
+            self._import_from_pybloat()
             from main import fetch_data, analyze_data
 
             args = self.build_command_args()
@@ -1273,13 +1313,17 @@ class TerminalUI:
             df = fetch_data(args)
 
             if df is not None:
+                # Display which exchange was actually used (for CCXT:ALL mode)
+                if 'exchange' in df.attrs and df.attrs['exchange'] != self.settings['exchange']:
+                    self.print_info(f"Data fetched from {df.attrs['exchange']} exchange")
+
                 # Mark fetch_data as completed
                 self.completed_functions['fetch_data'] = True
 
                 self.print_info("Performing technical analysis...")
 
                 # Show loading animation while analyzing data
-                self.show_loading_animation("Calculating technical indicators", duration=3)
+                self.show_loading_animation("Calculating technical indicators", duration=3, compact_completion=True)
 
                 df_analyzed = analyze_data(df, args)
 
@@ -1288,22 +1332,38 @@ class TerminalUI:
                     # Mark analyze_data as completed
                     self.completed_functions['analyze_data'] = True
 
-                    # Show key indicators instead of sample data
+                    # Show key indicators and metrics in a combined format
                     latest = df_analyzed.iloc[-1]
-                    print("\nKey indicators (latest values):")
+                    print(f"\n{Fore.YELLOW}KEY INDICATORS & METRICS{Style.RESET_ALL}")
+                    print(f"{Fore.YELLOW}---------------------{Style.RESET_ALL}")
+
+                    # Create a two-column layout for indicators and metrics
+                    left_column = []
+                    right_column = []
 
                     # Show RSI if available
                     if 'rsi_14' in df_analyzed.columns:
                         rsi = latest['rsi_14']
                         rsi_status = "Oversold" if rsi < 30 else "Overbought" if rsi > 70 else "Neutral"
-                        print(f"RSI (14): {rsi:.2f} - {rsi_status}")
+                        rsi_color = Fore.RED if rsi < 30 else Fore.GREEN if rsi > 70 else Fore.WHITE
+                        left_column.append(f"RSI (14): {rsi_color}{rsi:.2f} - {rsi_status}{Style.RESET_ALL}")
 
                     # Show MACD if available
                     if 'MACD_12_26_9' in df_analyzed.columns and 'MACDs_12_26_9' in df_analyzed.columns:
                         macd = latest['MACD_12_26_9']
                         signal = latest['MACDs_12_26_9']
+                        macd_hist = macd - signal
                         macd_status = "Bullish" if macd > signal else "Bearish"
-                        print(f"MACD: {macd:.4f}, Signal: {signal:.4f} - {macd_status}")
+                        macd_color = Fore.GREEN if macd > signal else Fore.RED
+                        left_column.append(f"MACD: {macd_color}{macd:.4f} - {macd_status}{Style.RESET_ALL} (H: {macd_hist:.4f})")
+
+                    # Show Moving Averages if available
+                    if 'sma_50' in df_analyzed.columns and 'sma_200' in df_analyzed.columns:
+                        sma_50 = latest['sma_50']
+                        sma_200 = latest['sma_200']
+                        ma_status = "Golden Cross" if sma_50 > sma_200 else "Death Cross"
+                        ma_color = Fore.GREEN if sma_50 > sma_200 else Fore.RED
+                        left_column.append(f"MA Cross: {ma_color}{ma_status}{Style.RESET_ALL} ({sma_50:.2f}/{sma_200:.2f})")
 
                     # Show Bollinger Bands if available
                     if 'BBL_20_2.0' in df_analyzed.columns and 'BBM_20_2.0' in df_analyzed.columns and 'BBU_20_2.0' in df_analyzed.columns:
@@ -1311,8 +1371,36 @@ class TerminalUI:
                         middle = latest['BBM_20_2.0']
                         upper = latest['BBU_20_2.0']
                         price = latest['close']
-                        bb_status = "Below lower band" if price < lower else "Above upper band" if price > upper else "Within bands"
-                        print(f"Bollinger Bands: Lower: {lower:.2f}, Middle: {middle:.2f}, Upper: {upper:.2f} - {bb_status}")
+                        bb_position = (price - lower) / (upper - lower) * 100 if (upper - lower) > 0 else 50
+                        bb_status = "Lower Band" if price < lower else "Upper Band" if price > upper else "Middle Band"
+                        bb_color = Fore.RED if price < lower else Fore.GREEN if price > upper else Fore.WHITE
+                        left_column.append(f"BB: {bb_color}{bb_status}{Style.RESET_ALL} ({bb_position:.1f}%)")
+
+                    # Add price information to right column
+                    right_column.append(f"Price: {Fore.CYAN}{latest['close']:.5f}{Style.RESET_ALL}")
+                    right_column.append(f"Volume: {Fore.YELLOW}{latest.get('volume', 'N/A'):.0f}{Style.RESET_ALL}")
+
+                    # Add more metrics if available
+                    if 'atr_14' in df_analyzed.columns:
+                        right_column.append(f"ATR (14): {Fore.MAGENTA}{latest['atr_14']:.5f}{Style.RESET_ALL}")
+
+                    if 'obv' in df_analyzed.columns:
+                        right_column.append(f"OBV: {Fore.BLUE}{latest['obv']:.0f}{Style.RESET_ALL}")
+
+                    # Ensure both columns have the same number of items
+                    max_items = max(len(left_column), len(right_column))
+                    left_column.extend([''] * (max_items - len(left_column)))
+                    right_column.extend([''] * (max_items - len(right_column)))
+
+                    # Combine columns with proper spacing
+                    for i in range(max_items):
+                        left_item = left_column[i]
+                        right_item = right_column[i]
+                        # Remove ANSI color codes for length calculation
+                        left_item_clean = left_item.replace(Fore.RED, '').replace(Fore.GREEN, '').replace(Fore.WHITE, '').replace(Fore.YELLOW, '').replace(Fore.CYAN, '').replace(Fore.MAGENTA, '').replace(Fore.BLUE, '').replace(Style.RESET_ALL, '')
+                        print(f"{left_item}{' ' * (40 - len(left_item_clean))}{right_item}")
+
+                    print()
 
                     # Display analysis in current terminal
                     self.print_info("\nDisplaying detailed analysis...")
@@ -1345,6 +1433,8 @@ class TerminalUI:
         self.print_header("Training Model")
 
         try:
+            # Import main from PyBloat directory
+            self._import_from_pybloat()
             from main import fetch_data, analyze_data, train_model
 
             args = self.build_command_args()
@@ -1363,11 +1453,15 @@ class TerminalUI:
                 "Validating data integrity...",
                 "Preparing dataset..."
             ]
-            self.show_loading_animation("Retrieving market data", duration=2, log_messages=fetch_logs)
+            self.show_loading_animation("Retrieving market data", duration=2, log_messages=fetch_logs, compact_completion=True)
 
             df = fetch_data(args)
 
             if df is not None:
+                # Display which exchange was actually used (for CCXT:ALL mode)
+                if 'exchange' in df.attrs and df.attrs['exchange'] != self.settings['exchange']:
+                    self.print_info(f"Data fetched from {df.attrs['exchange']} exchange")
+
                 # Analyze data with minimal output
                 self.print_info("Calculating technical indicators...")
 
@@ -1379,7 +1473,7 @@ class TerminalUI:
                     "Evaluating volatility measures...",
                     "Creating trading signals..."
                 ]
-                self.show_loading_animation("Analyzing market data", duration=2.5, log_messages=analysis_logs)
+                self.show_loading_animation("Analyzing market data", duration=2.5, log_messages=analysis_logs, compact_completion=True)
 
                 df_analyzed = analyze_data(df, args)
 
@@ -1394,7 +1488,7 @@ class TerminalUI:
                         "Training model...",
                         "Evaluating performance..."
                     ]
-                    self.show_loading_animation("Training machine learning model", duration=4, log_messages=train_logs)
+                    self.show_loading_animation("Training machine learning model", duration=4, log_messages=train_logs, compact_completion=True)
 
                     model, model_path = train_model(df_analyzed, args)
 
@@ -1442,6 +1536,8 @@ class TerminalUI:
             return
 
         try:
+            # Import main from PyBloat directory
+            self._import_from_pybloat()
             from main import fetch_data, analyze_data, predict
 
             # Clear any previous logs
@@ -1467,15 +1563,19 @@ class TerminalUI:
                 "Checking for missing values...",
                 "Finalizing data retrieval..."
             ]
-            self.show_loading_animation("Retrieving market data", duration=2, log_messages=fetch_logs)
+            self.show_loading_animation("Retrieving market data", duration=2, log_messages=fetch_logs, compact_completion=True)
 
             df = fetch_data(args)
 
             if df is not None:
+                # Display which exchange was actually used (for CCXT:ALL mode)
+                if 'exchange' in df.attrs and df.attrs['exchange'] != self.settings['exchange']:
+                    self.print_info(f"Data fetched from {df.attrs['exchange']} exchange")
+
                 self.print_info("Performing technical analysis...")
 
                 # Show loading animation while analyzing data
-                self.show_loading_animation("Calculating technical indicators", duration=2.5)
+                self.show_loading_animation("Calculating technical indicators", duration=2.5, compact_completion=True)
 
                 df_analyzed = analyze_data(df, args)
 
@@ -1495,7 +1595,7 @@ class TerminalUI:
                         "Formatting prediction results...",
                         "Finalizing predictions..."
                     ]
-                    self.show_loading_animation("Running prediction model", duration=2, log_messages=predict_logs)
+                    self.show_loading_animation("Running prediction model", duration=2, log_messages=predict_logs, compact_completion=True)
 
                     df_predictions = predict(df_analyzed, args.model_path, args)
 
@@ -1504,8 +1604,9 @@ class TerminalUI:
                         # Mark make_predictions as completed
                         self.completed_functions['make_predictions'] = True
 
-                        # Display prediction summary instead of sample data
-                        print("\nPrediction Summary:")
+                        # Display prediction summary with improved formatting
+                        print(f"\n{Fore.YELLOW}PREDICTION SUMMARY{Style.RESET_ALL}")
+                        print(f"{Fore.YELLOW}------------------{Style.RESET_ALL}")
 
                         if 'prediction' in df_predictions.columns:
                             # Count predictions
@@ -1518,19 +1619,46 @@ class TerminalUI:
                             bullish_pct = (bullish_count / total_preds) * 100 if total_preds > 0 else 0
                             bearish_pct = (bearish_count / total_preds) * 100 if total_preds > 0 else 0
 
-                            # Display summary
-                            print(f"Bullish signals: {bullish_count} ({bullish_pct:.1f}%)")
-                            print(f"Bearish signals: {bearish_count} ({bearish_pct:.1f}%)")
-
                             # Latest prediction
                             latest_pred = df_predictions['prediction'].iloc[-1]
                             latest_prob = df_predictions['prediction_probability'].iloc[-1] if 'prediction_probability' in df_predictions.columns else None
 
                             pred_text = "Bullish" if latest_pred == 1 else "Bearish"
+                            pred_color = Fore.GREEN if latest_pred == 1 else Fore.RED
                             prob_text = f" (Confidence: {latest_prob:.2f})" if latest_prob is not None else ""
 
-                            print(f"\nLatest prediction: {Fore.YELLOW}{pred_text}{prob_text}{Style.RESET_ALL}")
-                            print(f"Current price: {df_predictions['close'].iloc[-1]:.2f}")
+                            # Create a two-column layout for prediction summary
+                            left_column = []
+                            right_column = []
+
+                            # Add prediction info to left column
+                            left_column.append(f"Prediction: {pred_color}{pred_text}{Style.RESET_ALL}{prob_text}")
+                            left_column.append(f"Bullish signals: {Fore.GREEN}{bullish_count} ({bullish_pct:.1f}%){Style.RESET_ALL}")
+                            left_column.append(f"Bearish signals: {Fore.RED}{bearish_count} ({bearish_pct:.1f}%){Style.RESET_ALL}")
+
+                            # Add price info to right column
+                            latest = df_predictions.iloc[-1]
+                            right_column.append(f"Current price: {Fore.CYAN}{latest['close']:.5f}{Style.RESET_ALL}")
+
+                            # Add entry/exit points with TP/SL levels if available
+                            if all(col in df_predictions.columns for col in ['entry_price', 'stop_loss', 'take_profit', 'risk_reward']):
+                                right_column.append(f"Entry Price: {Fore.CYAN}{latest['entry_price']:.5f}{Style.RESET_ALL}")
+                                right_column.append(f"Stop Loss: {Fore.RED}{latest['stop_loss']:.5f}{Style.RESET_ALL}")
+                                right_column.append(f"Take Profit: {Fore.GREEN}{latest['take_profit']:.5f}{Style.RESET_ALL}")
+                                right_column.append(f"Risk/Reward: {Fore.YELLOW}1:{latest['risk_reward']:.2f}{Style.RESET_ALL}")
+
+                            # Ensure both columns have the same number of items
+                            max_items = max(len(left_column), len(right_column))
+                            left_column.extend([''] * (max_items - len(left_column)))
+                            right_column.extend([''] * (max_items - len(right_column)))
+
+                            # Combine columns with proper spacing
+                            for i in range(max_items):
+                                left_item = left_column[i]
+                                right_item = right_column[i]
+                                # Remove ANSI color codes for length calculation
+                                left_item_clean = left_item.replace(Fore.RED, '').replace(Fore.GREEN, '').replace(Fore.WHITE, '').replace(Fore.YELLOW, '').replace(Fore.CYAN, '').replace(Style.RESET_ALL, '')
+                                print(f"{left_item}{' ' * (40 - len(left_item_clean))}{right_item}")
                         else:
                             print("No prediction column found in results.")
 
@@ -1572,6 +1700,8 @@ class TerminalUI:
             return
 
         try:
+            # Import main from PyBloat directory
+            self._import_from_pybloat()
             from main import fetch_data, analyze_data, predict, backtest
 
             # Clear any previous logs
@@ -1585,15 +1715,18 @@ class TerminalUI:
             self.print_info(f"Fetching data for {args.symbol} from {args.exchange}...")
 
             # Show loading animation while fetching data
-            self.show_loading_animation("Retrieving market data", duration=2)
+            self.show_loading_animation("Retrieving market data", duration=2, compact_completion=True)
 
             df = fetch_data(args)
 
             if df is not None:
+                # Display which exchange was actually used (for CCXT:ALL mode)
+                if 'exchange' in df.attrs and df.attrs['exchange'] != self.settings['exchange']:
+                    self.print_info(f"Data fetched from {df.attrs['exchange']} exchange")
                 self.print_info("Performing technical analysis...")
 
                 # Show loading animation while analyzing data
-                self.show_loading_animation("Calculating technical indicators", duration=2.5)
+                self.show_loading_animation("Calculating technical indicators", duration=2.5, compact_completion=True)
 
                 df_analyzed = analyze_data(df, args)
 
@@ -1601,7 +1734,7 @@ class TerminalUI:
                     self.print_info("Making predictions...")
 
                     # Show loading animation while making predictions
-                    self.show_loading_animation("Running prediction model", duration=2)
+                    self.show_loading_animation("Running prediction model", duration=2, compact_completion=True)
 
                     df_predictions = predict(df_analyzed, args.model_path, args)
 
@@ -1609,7 +1742,7 @@ class TerminalUI:
                         self.print_info("Backtesting predictions...")
 
                         # Show loading animation while backtesting
-                        self.show_loading_animation("Simulating trading strategy", duration=3)
+                        self.show_loading_animation("Simulating trading strategy", duration=3, compact_completion=True)
 
                         performance_metrics, trading_metrics = backtest(df_predictions, args)
 
@@ -1647,7 +1780,7 @@ class TerminalUI:
                         self.print_info("\nDisplaying detailed backtest results...")
 
                         # Show loading animation while preparing output
-                        self.show_loading_animation("Preparing backtest report", duration=1.5)
+                        self.show_loading_animation("Preparing backtest report", duration=1.5, compact_completion=True)
 
                         # Display the collected logs for this operation only
                         self.display_collected_logs(f"Backtest Process Log - {args.symbol}", operation_start_time)
@@ -1686,6 +1819,8 @@ class TerminalUI:
             return
 
         try:
+            # Import main from PyBloat directory
+            self._import_from_pybloat()
             from main import fetch_data, analyze_data
             from src.analysis.local_llm import LocalLLMAnalyzer, AVAILABLE_MODELS, DEFAULT_MODEL_PATH
             import os
@@ -1713,6 +1848,10 @@ class TerminalUI:
                 self.wait_for_key()
                 return
 
+            # Display which exchange was actually used (for CCXT:ALL mode)
+            if 'exchange' in df.attrs and df.attrs['exchange'] != self.settings['exchange']:
+                self.print_info(f"Data fetched from {df.attrs['exchange']} exchange")
+
             # Analyze data
             self.print_info("Performing technical analysis...")
             df_analyzed = analyze_data(df, args)
@@ -1732,10 +1871,23 @@ class TerminalUI:
 
             # Check if model exists, offer to download if not
             model_file_path = os.path.join(DEFAULT_MODEL_PATH, model_name)
-            if not os.path.exists(model_file_path) or os.path.getsize(model_file_path) < 1000000:  # Less than 1MB is suspicious
-                if os.path.exists(model_file_path) and os.path.getsize(model_file_path) < 1000000:
+
+            # Check if model already exists and has a reasonable size (at least 1MB)
+            if os.path.exists(model_file_path) and os.path.getsize(model_file_path) > 1000000:
+                file_size_gb = os.path.getsize(model_file_path) / (1024 * 1024 * 1024)
+                self.print_info(f"Model already exists at {model_file_path}")
+                self.print_info(f"Model file size: {file_size_gb:.2f} GB")
+            # If file doesn't exist or is too small (likely a failed download)
+            else:
+                if os.path.exists(model_file_path) and os.path.getsize(model_file_path) <= 1000000:
                     self.print_warning(f"Model file exists but appears to be corrupted or incomplete: {model_name}")
                     self.print_warning(f"File size: {os.path.getsize(model_file_path) / (1024*1024):.2f} MB")
+                    # Remove the incomplete file
+                    try:
+                        os.remove(model_file_path)
+                        self.print_info("Removed incomplete file.")
+                    except Exception as e:
+                        self.print_error(f"Failed to remove incomplete file: {str(e)}")
                 else:
                     self.print_warning(f"Model file not found: {model_name}")
 
@@ -1746,18 +1898,24 @@ class TerminalUI:
                 # Ask to download
                 download = self.get_input(f"Would you like to download the {self.settings['llm_model']} model now? (y/n): ")
                 if download.lower() == 'y':
-                    # Try using the dedicated script first
+                    # Try using the dedicated script from PyBloat directory first
                     try:
                         import subprocess
-                        self.print_info(f"Downloading model using dedicated script...")
-                        cmd = [sys.executable, "download_llm_model.py", "download", self.settings['llm_model']]
-                        result = subprocess.run(cmd, capture_output=True, text=True)
+                        self.print_info(f"Downloading model using dedicated script from PyBloat...")
+                        download_script = get_pybloat_path("download_llm_model.py")
+                        if os.path.exists(download_script):
+                            cmd = [sys.executable, download_script, "download", self.settings['llm_model']]
+                            result = subprocess.run(cmd, capture_output=True, text=True)
 
-                        if result.returncode == 0:
-                            self.print_success("Model downloaded successfully using dedicated script.")
-                            success = True
+                            if result.returncode == 0:
+                                self.print_success("Model downloaded successfully using dedicated script.")
+                                success = True
+                            else:
+                                self.print_warning(f"Failed to download model using dedicated script: {result.stderr}")
+                                self.print_info("Falling back to built-in download method...")
+                                success = self.download_llm_model(self.settings['llm_model'])
                         else:
-                            self.print_warning(f"Failed to download model using dedicated script: {result.stderr}")
+                            self.print_warning(f"Download script not found in PyBloat directory")
                             self.print_info("Falling back to built-in download method...")
                             success = self.download_llm_model(self.settings['llm_model'])
                     except Exception as e:
@@ -1794,7 +1952,7 @@ class TerminalUI:
                 "Preparing model context...",
                 "Model ready for inference..."
             ]
-            self.show_loading_animation("Loading AI model", duration=3, log_messages=model_logs)
+            self.show_loading_animation("Loading AI model", duration=3, log_messages=model_logs, compact_completion=True)
 
             # Configure GPU usage
             n_gpu_layers = 0
@@ -1810,17 +1968,16 @@ class TerminalUI:
 
             # Check if LLM was initialized successfully
             if llm_analyzer.llm is None:
-                self.print_error("ERROR - Failed to initialize LLM model.")
-                self.print_error(f"Error loading model: Failed to load model from file: {model_file_path}")
-                self.print_info("\nPossible solutions:")
+                self.print_warning("WARNING - Failed to initialize LLM model.")
+                self.print_warning(f"Model file not found or corrupted: {model_file_path}")
+                self.print_info("Using fallback technical indicator-based recommendation system instead.")
+                self.print_info("\nTo use the full LLM capabilities, you can:")
                 self.print_info("1. Try downloading the model again using the dedicated script:")
                 self.print_info(f"   python download_llm_model.py download {self.settings['llm_model']} --force")
                 self.print_info("2. Check if your system meets the requirements for running LLMs:")
                 self.print_info("   - At least 16GB of RAM")
                 self.print_info("   - For GPU acceleration: NVIDIA GPU with at least 8GB VRAM")
                 self.print_info("3. Try a smaller model if your system has limited resources")
-                self.wait_for_key()
-                return
 
             # Perform LLM analysis
             self.print_info("Analyzing market data with local LLM...")
@@ -1838,13 +1995,24 @@ class TerminalUI:
                 "Formulating trading recommendation...",
                 "Finalizing AI analysis..."
             ]
-            self.show_loading_animation("AI analyzing market data", duration=3, log_messages=analysis_logs)
+            self.show_loading_animation("AI analyzing market data", duration=3, log_messages=analysis_logs, compact_completion=True)
             recommendation = llm_analyzer.analyze(df_analyzed)
 
-            if "error" in recommendation:
+            # Check if we got a recommendation
+            if recommendation is None:
+                self.print_error(f"LLM analysis failed: No recommendation returned")
+                self.wait_for_key()
+                return
+
+            # Check if it's an error (but not a fallback recommendation)
+            if "error" in recommendation and recommendation.get("model") != "FALLBACK_TECHNICAL_INDICATORS" and recommendation.get("model") != "FALLBACK_ERROR":
                 self.print_error(f"LLM analysis failed: {recommendation['error']}")
                 self.wait_for_key()
                 return
+
+            # Check if it's a fallback recommendation
+            if recommendation.get("model") == "FALLBACK_TECHNICAL_INDICATORS":
+                self.print_info("Using fallback technical indicator-based recommendation system.")
 
             # Save analysis if requested
             if self.settings['save']:
@@ -1862,10 +2030,18 @@ class TerminalUI:
             self.print_header(f"LLM Analysis Results - {args.symbol} ({args.timeframe})")
 
             # Print recommendation summary
-            self.print_info(f"\nTrading Recommendation: {Fore.YELLOW}{recommendation['recommendation']}{Style.RESET_ALL}")
-            self.print_info(f"Risk Assessment: {Fore.YELLOW}{recommendation['risk']}{Style.RESET_ALL}")
-            self.print_info(f"Model Used: {Fore.CYAN}{recommendation.get('model', model_name)}{Style.RESET_ALL}")
-            self.print_info(f"Analysis Timestamp: {recommendation['timestamp']}")
+            if 'recommendation' in recommendation:
+                # Original LLM format
+                self.print_info(f"\nTrading Recommendation: {Fore.YELLOW}{recommendation['recommendation']}{Style.RESET_ALL}")
+                self.print_info(f"Risk Assessment: {Fore.YELLOW}{recommendation.get('risk', 'UNKNOWN')}{Style.RESET_ALL}")
+                self.print_info(f"Model Used: {Fore.CYAN}{recommendation.get('model', model_name)}{Style.RESET_ALL}")
+                self.print_info(f"Analysis Timestamp: {recommendation.get('timestamp', datetime.now().isoformat())}")
+            else:
+                # Fallback format
+                self.print_info(f"\nTrading Signal: {Fore.YELLOW}{recommendation.get('signal', 'neutral').upper()}{Style.RESET_ALL}")
+                self.print_info(f"Market Summary: {Fore.YELLOW}{recommendation.get('market_summary', 'Unknown')}{Style.RESET_ALL}")
+                self.print_info(f"Confidence: {Fore.YELLOW}{recommendation.get('confidence', 'low')}{Style.RESET_ALL}")
+                self.print_info(f"Generated By: {Fore.CYAN}{recommendation.get('generated_by', 'fallback_system')}{Style.RESET_ALL}")
 
             # Print entry/exit levels if available
             print("\n" + "=" * 40)
@@ -1902,8 +2078,12 @@ class TerminalUI:
 
             print()
 
-            # Print full analysis
-            print(recommendation['analysis'])
+            # Print full analysis if available
+            if 'analysis' in recommendation:
+                print(recommendation['analysis'])
+            elif 'reasoning' in recommendation:
+                print(f"\n{Fore.CYAN}Analysis:{Style.RESET_ALL}")
+                print(recommendation['reasoning'])
 
             self.wait_for_key()
 
@@ -1918,6 +2098,8 @@ class TerminalUI:
         self.print_header("Running All Steps")
 
         try:
+            # Import main from PyBloat directory
+            self._import_from_pybloat()
             from main import fetch_data, analyze_data, train_model, predict, backtest
 
             args = self.build_command_args()
@@ -1926,19 +2108,22 @@ class TerminalUI:
             self.collected_logs = []
 
             # Record operation start time
-            operation_start_time = datetime.now()
 
             # Fetch data
             self.print_info(f"Fetching data for {args.symbol} from {args.exchange}...")
 
             # Show loading animation while fetching data
-            self.show_loading_animation("Retrieving market data", duration=2)
+            self.show_loading_animation("Retrieving market data", duration=2, compact_completion=True)
 
             df = fetch_data(args)
             if df is None:
                 self.print_error("Failed to fetch data.")
                 self.wait_for_key()
                 return
+
+            # Display which exchange was actually used (for CCXT:ALL mode)
+            if 'exchange' in df.attrs and df.attrs['exchange'] != self.settings['exchange']:
+                self.print_info(f"Data fetched from {df.attrs['exchange']} exchange")
 
             self.print_success(f"Successfully fetched {len(df)} rows of data.")
             self.print_info(f"Time range: {df.index.min()} to {df.index.max()}")
@@ -1959,7 +2144,7 @@ class TerminalUI:
                 "Evaluating trend strength...",
                 "Finalizing technical indicators..."
             ]
-            self.show_loading_animation("Calculating technical indicators", duration=2.5, log_messages=custom_logs)
+            self.show_loading_animation("Calculating technical indicators", duration=2.5, log_messages=custom_logs, compact_completion=True)
 
             df_analyzed = analyze_data(df, args)
             if df_analyzed is None or df_analyzed.empty:
@@ -1983,7 +2168,7 @@ class TerminalUI:
                 "Evaluating model performance...",
                 "Finalizing model..."
             ]
-            self.show_loading_animation("Training machine learning model", duration=4, log_messages=train_logs)
+            self.show_loading_animation("Training machine learning model", duration=4, log_messages=train_logs, compact_completion=True)
 
             model, model_path = train_model(df_analyzed, args)
             if model is None:
@@ -2006,7 +2191,7 @@ class TerminalUI:
             self.print_info("Making predictions...")
 
             # Show loading animation while making predictions
-            self.show_loading_animation("Running prediction model", duration=2)
+            self.show_loading_animation("Running prediction model", duration=2, compact_completion=True)
 
             df_predictions = predict(df_analyzed, model_path, args)
             if df_predictions is None:
@@ -2038,7 +2223,7 @@ class TerminalUI:
             self.print_info("Backtesting predictions...")
 
             # Show loading animation while backtesting
-            self.show_loading_animation("Simulating trading strategy", duration=3)
+            self.show_loading_animation("Simulating trading strategy", duration=3, compact_completion=True)
 
             performance_metrics, trading_metrics = backtest(df_predictions, args)
 
@@ -2076,7 +2261,7 @@ class TerminalUI:
             self.print_info("\nDisplaying comprehensive analysis...")
 
             # Show loading animation while preparing output
-            self.show_loading_animation("Preparing comprehensive report", duration=2)
+            self.show_loading_animation("Preparing comprehensive report", duration=2, compact_completion=True)
 
             # Display the complete analysis in the current terminal
             if self.output_generator.display_in_current_terminal(
@@ -2092,7 +2277,7 @@ class TerminalUI:
                 self.print_info("\nPerforming LLM analysis...")
 
                 # Show loading animation for LLM analysis
-                self.show_loading_animation("Initializing AI analysis", duration=2)
+                self.show_loading_animation("Initializing AI analysis", duration=2, compact_completion=True)
 
                 from src.analysis.local_llm import LocalLLMAnalyzer, AVAILABLE_MODELS
 
@@ -2113,7 +2298,7 @@ class TerminalUI:
                 )
 
                 # Show loading animation for LLM processing
-                self.show_loading_animation("AI analyzing market data", duration=3)
+                self.show_loading_animation("AI analyzing market data", duration=3, compact_completion=True)
 
                 recommendation = llm_analyzer.analyze(df_analyzed)
 
@@ -2134,13 +2319,13 @@ class TerminalUI:
                         print("=" * 40)
 
                         if entry_price is not None:
-                            print(f"{Fore.GREEN}Entry Price:{Style.RESET_ALL} {entry_price:.2f}")
+                            print(f"{Fore.GREEN}Entry Price:{Style.RESET_ALL} {entry_price:.5f}")
 
                         if stop_loss is not None:
-                            print(f"{Fore.RED}Stop Loss:{Style.RESET_ALL} {stop_loss:.2f}")
+                            print(f"{Fore.RED}Stop Loss:{Style.RESET_ALL} {stop_loss:.5f}")
 
                         if take_profit is not None:
-                            print(f"{Fore.GREEN}Take Profit:{Style.RESET_ALL} {take_profit:.2f}")
+                            print(f"{Fore.GREEN}Take Profit:{Style.RESET_ALL} {take_profit:.5f}")
 
                         if risk_reward is not None:
                             print(f"{Fore.YELLOW}Risk/Reward Ratio:{Style.RESET_ALL} {risk_reward}")
@@ -2156,6 +2341,8 @@ class TerminalUI:
                         args.terminal_chart = True
                         args.interactive = False
                         self.print_info("Displaying chart in terminal...")
+                        # Import main from PyBloat directory
+                        self._import_from_pybloat()
                         from main import visualize
                         visualize(df_analyzed, args, llm_recommendation=recommendation)
                     elif chart_choice == 'b':
@@ -2163,6 +2350,8 @@ class TerminalUI:
                         args.terminal_chart = False
                         args.interactive = True
                         self.print_info("Displaying chart in browser...")
+                        # Import main from PyBloat directory
+                        self._import_from_pybloat()
                         from main import visualize
                         visualize(df_analyzed, args, llm_recommendation=recommendation)
                 else:
@@ -2291,67 +2480,48 @@ class TerminalUI:
         print(Fore.CYAN + "=" * width + Style.RESET_ALL)
         print()
 
-        # Check if the guide file exists
-        guide_path = "docs/how_to_use.md"
-        if not os.path.exists(guide_path):
-            self.print_error(f"Guide file not found: {guide_path}")
-            self.wait_for_key()
-            return
+        # List of README files
+        readme_files = [
+            "README.md",
+            "README_EXECUTABLE.md",
+            "TERMINAL_UI_GUIDE.md",
+            "tests/README.md"
+        ]
 
-        try:
-            # Read the guide file
-            with open(guide_path, 'r') as f:
-                guide_content = f.readlines()
+        # Display message to read README files
+        print(f"{Fore.YELLOW}Please read the README markdown files for detailed instructions:{Style.RESET_ALL}\n")
 
-            # Display the guide with pagination
-            lines_per_page = 20
-            total_pages = (len(guide_content) + lines_per_page - 1) // lines_per_page
-            current_page = 1
+        for i, file in enumerate(readme_files, 1):
+            if os.path.exists(file):
+                print(f"{Fore.GREEN}{i}. {file}{Style.RESET_ALL} - {self._get_readme_title(file)}")
+            else:
+                print(f"{Fore.RED}{i}. {file} (not found){Style.RESET_ALL}")
 
-            while current_page <= total_pages:
-                self.clear_screen()
-                print(Fore.CYAN + "=" * width + Style.RESET_ALL)
-                print(Fore.CYAN + f"{title} (Page {current_page}/{total_pages}){' ':^{width-len(title)-15}}" + Style.RESET_ALL)
-                print(Fore.CYAN + "=" * width + Style.RESET_ALL)
-                print()
-
-                # Calculate start and end lines for current page
-                start_line = (current_page - 1) * lines_per_page
-                end_line = min(start_line + lines_per_page, len(guide_content))
-
-                # Display current page content
-                for line in guide_content[start_line:end_line]:
-                    # Format markdown headings
-                    if line.startswith('# '):
-                        print(f"{Fore.YELLOW}{line.strip()}{Style.RESET_ALL}")
-                    elif line.startswith('## '):
-                        print(f"{Fore.GREEN}{line.strip()}{Style.RESET_ALL}")
-                    elif line.startswith('### '):
-                        print(f"{Fore.CYAN}{line.strip()}{Style.RESET_ALL}")
-                    elif line.startswith('- '):
-                        print(f"{Fore.BLUE}•{Style.RESET_ALL} {line[2:].strip()}")
-                    elif line.startswith('**'):
-                        print(f"{Fore.MAGENTA}{line.strip()}{Style.RESET_ALL}")
-                    else:
-                        print(line.rstrip())
-
-                print()
-                print(f"Page {current_page} of {total_pages}")
-                print(f"[{Fore.GREEN}N{Style.RESET_ALL}]ext page, [{Fore.GREEN}P{Style.RESET_ALL}]revious page, [{Fore.GREEN}Q{Style.RESET_ALL}]uit")
-
-                # Get user input for navigation
-                nav = self.get_input("Enter choice: ").lower()
-                if nav == 'n' and current_page < total_pages:
-                    current_page += 1
-                elif nav == 'p' and current_page > 1:
-                    current_page -= 1
-                elif nav == 'q':
-                    break
-
-        except Exception as e:
-            self.print_error(f"Error displaying guide: {e}")
+        print()
+        print(f"{Fore.YELLOW}Additional documentation:{Style.RESET_ALL}")
+        print(f"{Fore.BLUE}• docs/how_to_use.md{Style.RESET_ALL} - Detailed user guide")
+        print()
+        print(f"{Fore.CYAN}The README files contain comprehensive information about:{Style.RESET_ALL}")
+        print(f"{Fore.WHITE}• Installation and setup{Style.RESET_ALL}")
+        print(f"{Fore.WHITE}• Features and functionality{Style.RESET_ALL}")
+        print(f"{Fore.WHITE}• Usage instructions{Style.RESET_ALL}")
+        print(f"{Fore.WHITE}• Technical details{Style.RESET_ALL}")
+        print(f"{Fore.WHITE}• Testing procedures{Style.RESET_ALL}")
+        print()
+        print(f"{Fore.MAGENTA}You can open these files in any text editor or markdown viewer.{Style.RESET_ALL}")
 
         self.wait_for_key()
+
+    def _get_readme_title(self, file_path):
+        """Extract the title from a README file."""
+        try:
+            with open(file_path, 'r') as f:
+                first_line = f.readline().strip()
+                if first_line.startswith('# '):
+                    return first_line[2:]
+                return "Documentation file"
+        except Exception:
+            return "Documentation file"
 
     def clear_data(self):
         """Clear data files with confirmation."""

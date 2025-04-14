@@ -7,6 +7,7 @@ for predicting cryptocurrency price movements based on technical indicators.
 
 import os
 import numpy as np
+import pandas as pd
 import joblib
 from datetime import datetime
 import logging
@@ -329,12 +330,88 @@ class PredictionModel:
             # Add predictions to DataFrame
             df['prediction'] = predictions
 
+            # Calculate entry/exit points with TP/SL levels
+            self._calculate_trading_levels(df)
+
             logger.info(f"Made predictions for {len(df)} samples")
             return df
 
         except Exception as e:
             logger.error(f"Error making predictions: {e}")
             return None
+
+    def _calculate_trading_levels(self, df):
+        """
+        Calculate entry/exit points with stop-loss and take-profit levels.
+
+        Args:
+            df (pd.DataFrame): DataFrame with predictions
+        """
+        try:
+            # Get the latest price and prediction
+            latest_price = df['close'].iloc[-1]
+            latest_pred = df['prediction'].iloc[-1]
+            latest_prob = df.get('prediction_probability', pd.Series([0.5])).iloc[-1]
+
+            # Calculate ATR (Average True Range) for dynamic SL/TP if available
+            atr_value = None
+            if 'atr_14' in df.columns:
+                atr_value = df['atr_14'].iloc[-1]
+            elif 'atr' in df.columns:
+                atr_value = df['atr'].iloc[-1]
+
+            # Default risk percentages
+            sl_pct = 0.03  # 3% stop loss
+            tp_pct = 0.05  # 5% take profit
+
+            # Adjust based on prediction confidence
+            confidence_factor = abs(latest_prob - 0.5) * 2  # Scale 0.5-1.0 to 0-1.0
+
+            # If ATR is available, use it to calculate dynamic SL/TP
+            if atr_value is not None and atr_value > 0:
+                # Use ATR-based calculation with confidence adjustment
+                atr_multiplier_sl = 2.0 + (1.0 * confidence_factor)  # 2-3x ATR for stop loss
+                atr_multiplier_tp = 3.0 + (2.0 * confidence_factor)  # 3-5x ATR for take profit
+
+                sl_amount = atr_value * atr_multiplier_sl
+                tp_amount = atr_value * atr_multiplier_tp
+
+                # Convert to percentage of price for consistency
+                sl_pct = sl_amount / latest_price
+                tp_pct = tp_amount / latest_price
+
+            # Calculate entry, stop loss, and take profit based on prediction
+            if latest_pred == 1:  # Bullish
+                # Entry slightly below current price for better entry
+                entry_price = latest_price * 0.995
+                stop_loss = entry_price * (1 - sl_pct)
+                take_profit = entry_price * (1 + tp_pct)
+            else:  # Bearish
+                # Entry slightly above current price for better entry
+                entry_price = latest_price * 1.005
+                stop_loss = entry_price * (1 + sl_pct)
+                take_profit = entry_price * (1 - tp_pct)
+
+            # Calculate risk-reward ratio
+            risk_amount = abs(entry_price - stop_loss)
+            reward_amount = abs(take_profit - entry_price)
+            risk_reward = reward_amount / risk_amount if risk_amount > 0 else 0
+
+            # Add to DataFrame
+            df['entry_price'] = entry_price
+            df['stop_loss'] = stop_loss
+            df['take_profit'] = take_profit
+            df['risk_reward'] = risk_reward
+
+            logger.info(f"Calculated trading levels: Entry={entry_price:.2f}, SL={stop_loss:.2f}, TP={take_profit:.2f}, R/R={risk_reward:.2f}")
+
+        except Exception as e:
+            logger.error(f"Error calculating trading levels: {e}")
+            # Set default values if calculation fails
+            df['entry_price'] = df['close'].iloc[-1]
+            df['stop_loss'] = df['close'].iloc[-1] * 0.97 if df['prediction'].iloc[-1] == 1 else df['close'].iloc[-1] * 1.03
+            df['take_profit'] = df['close'].iloc[-1] * 1.05 if df['prediction'].iloc[-1] == 1 else df['close'].iloc[-1] * 0.95
+            df['risk_reward'] = 1.67  # Default 1:1.67 risk-reward ratio
 
 
 # Example usage

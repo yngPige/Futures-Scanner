@@ -17,17 +17,49 @@ from datetime import datetime
 from pathlib import Path
 import numpy as np
 
-# Configure logging
+# Configure logging - only show errors
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.ERROR,  # Only log errors and above
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
+# Available models
+AVAILABLE_MODELS = {
+    "llama3-8b": {
+        "name": "llama-3-8b-instruct.Q4_K_M.gguf",
+        "url": "https://huggingface.co/TheBloke/Llama-3-8B-Instruct-GGUF/resolve/main/llama-3-8b-instruct.Q4_K_M.gguf",
+        "size_gb": 4.37,
+        "description": "Llama 3 8B Instruct model (4-bit quantized, medium quality)",
+        "trading_focus": "General purpose with good reasoning capabilities"
+    },
+    "mistral-7b": {
+        "name": "mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+        "url": "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
+        "size_gb": 3.83,
+        "description": "Mistral 7B Instruct v0.2 model (4-bit quantized, medium quality)",
+        "trading_focus": "Good balance of size and performance for financial analysis"
+    },
+    "phi2": {
+        "name": "phi-2.Q4_K_M.gguf",
+        "url": "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
+        "size_gb": 1.35,
+        "description": "Phi-2 model (4-bit quantized, medium quality)",
+        "trading_focus": "Smallest model, good for basic analysis on limited hardware"
+    },
+    "tinyllama": {
+        "name": "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+        "url": "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+        "size_gb": 0.6,
+        "description": "TinyLlama 1.1B Chat model (4-bit quantized, medium quality)",
+        "trading_focus": "Very small model, basic analysis capabilities, runs on any hardware"
+    }
+}
+
 # Default model settings
 DEFAULT_MODEL_PATH = os.path.join(os.path.expanduser("~"), ".cache", "futures_scanner", "models")
-DEFAULT_MODEL_NAME = "llama-3-8b-instruct.Q4_K_M.gguf"
-DEFAULT_MODEL_URL = "https://huggingface.co/TheBloke/Llama-3-8B-Instruct-GGUF/resolve/main/llama-3-8b-instruct.Q4_K_M.gguf"
+DEFAULT_MODEL_NAME = "phi-2.Q4_K_M.gguf"
+DEFAULT_MODEL_URL = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf"
 
 # Required dependencies
 REQUIRED_PACKAGES = {
@@ -224,69 +256,13 @@ class LocalLLMAnalyzer:
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(model_file_path), exist_ok=True)
 
-            # Try to use huggingface_hub if available
-            try:
-                from huggingface_hub import hf_hub_download
-
-                # Get repo_id and filename from model info
-                repo_id = None
-                filename = None
-
-                # Try to find the model in AVAILABLE_MODELS
-                for key, info in AVAILABLE_MODELS.items():
-                    if info.get('name') == self.model_name or key == self.model_name:
-                        repo_id = info.get('repo_id')
-                        filename = info.get('filename')
-                        break
-
-                if repo_id and filename:
-                    logger.info(f"Downloading model from Hugging Face Hub: {repo_id}/{filename}")
-                    # Download the model using huggingface_hub
-                    downloaded_path = hf_hub_download(
-                        repo_id=repo_id,
-                        filename=filename,
-                        local_dir=os.path.dirname(model_file_path),
-                        local_dir_use_symlinks=False
-                    )
-
-                    # Check if the file was downloaded successfully
-                    if os.path.exists(downloaded_path) and os.path.getsize(downloaded_path) > 1000000:
-                        logger.info(f"Successfully downloaded model to {downloaded_path}")
-                        # If the downloaded path is different from the expected path, copy the file
-                        if downloaded_path != model_file_path:
-                            import shutil
-                            shutil.copy2(downloaded_path, model_file_path)
-                            logger.info(f"Copied model from {downloaded_path} to {model_file_path}")
-                        return True
-                    else:
-                        logger.warning(f"Downloaded file is too small or does not exist: {downloaded_path}")
-                        # Fall back to direct download
-                else:
-                    logger.warning("No repo_id or filename found for the model, falling back to direct download")
-            except ImportError:
-                logger.warning("huggingface_hub not available, falling back to direct download")
-            except Exception as e:
-                logger.warning(f"Error downloading from Hugging Face Hub: {e}, falling back to direct download")
-
-            # Fall back to direct download if huggingface_hub fails
-            logger.info(f"Downloading model from URL: {model_url}")
+            # Import required modules
             import requests
             from tqdm import tqdm
 
             # Download with progress bar
-            response = requests.get(model_url, stream=True, timeout=30)
-
-            # Check if the request was successful
-            if response.status_code != 200:
-                logger.error(f"Failed to download model: HTTP status code {response.status_code}")
-                return False
-
+            response = requests.get(model_url, stream=True)
             total_size = int(response.headers.get('content-length', 0))
-
-            # Check if content length is reasonable
-            if total_size < 1000000:  # Less than 1MB is suspicious for a model file
-                logger.error(f"Content length is suspiciously small: {total_size} bytes")
-                return False
 
             with open(model_file_path, 'wb') as f, tqdm(
                 desc=self.model_name,
@@ -662,6 +638,79 @@ Format your response as a structured analysis with clear sections. Be decisive i
                 "model": self.model_name
             }
 
+    def _generate_fallback_recommendation(self, df):
+        """
+        Generate a fallback recommendation based on technical indicators when LLM is not available.
+
+        Args:
+            df (pd.DataFrame): DataFrame with market data and technical indicators
+
+        Returns:
+            dict: Analysis results including trading recommendation
+        """
+        try:
+            # Get the latest data point
+            latest_data = df.iloc[-1]
+
+            # Extract key indicators
+            rsi = latest_data.get('RSI_14', 50)
+            macd = latest_data.get('MACD_12_26_9', 0)
+            macd_signal = latest_data.get('MACDs_12_26_9', 0)
+            macd_hist = latest_data.get('MACDh_12_26_9', 0)
+            ema_short = latest_data.get('EMA_9', 0)
+            ema_long = latest_data.get('EMA_21', 0)
+            close_price = latest_data.get('close', 0)
+
+            # Determine trend based on EMAs
+            trend = "bullish" if ema_short > ema_long else "bearish"
+
+            # Determine signal based on RSI and MACD
+            signal = "neutral"
+            if rsi < 30 and macd > macd_signal:
+                signal = "buy"
+            elif rsi > 70 and macd < macd_signal:
+                signal = "sell"
+            elif macd > macd_signal and macd_hist > 0:
+                signal = "buy"
+            elif macd < macd_signal and macd_hist < 0:
+                signal = "sell"
+
+            # Calculate entry, stop loss, and take profit levels
+            entry_price = close_price
+            stop_loss = entry_price * 0.95 if signal == "buy" else entry_price * 1.05
+            take_profit = entry_price * 1.1 if signal == "buy" else entry_price * 0.9
+
+            # Format the recommendation
+            recommendation = {
+                "market_summary": f"The market is currently in a {trend} trend.",
+                "signal": signal,
+                "entry_price": entry_price,
+                "stop_loss": stop_loss,
+                "take_profit": take_profit,
+                "risk_reward_ratio": abs((take_profit - entry_price) / (entry_price - stop_loss)) if signal != "neutral" else 0,
+                "confidence": "medium",
+                "reasoning": f"Based on technical indicators: RSI at {rsi:.2f}, MACD at {macd:.2f}, with {trend} EMA crossover.",
+                "indicators_used": ["RSI", "MACD", "EMA"],
+                "generated_by": "fallback_system"
+            }
+
+            return recommendation
+
+        except Exception as e:
+            logger.error(f"Error generating fallback recommendation: {e}")
+            return {
+                "market_summary": "Unable to analyze market data.",
+                "signal": "neutral",
+                "entry_price": 0,
+                "stop_loss": 0,
+                "take_profit": 0,
+                "risk_reward_ratio": 0,
+                "confidence": "low",
+                "reasoning": "Error in fallback analysis system.",
+                "indicators_used": [],
+                "generated_by": "fallback_system"
+            }
+
     def analyze(self, df):
         """
         Analyze market data using LLM and generate trading recommendation.
@@ -675,6 +724,20 @@ Format your response as a structured analysis with clear sections. Be decisive i
         if df.empty:
             logger.warning("Empty DataFrame provided, cannot perform LLM analysis")
             return {"error": "Empty DataFrame provided"}
+
+        # Check if LLM is initialized
+        if self.llm is None:
+            logger.warning("LLM is not initialized, cannot perform analysis")
+            logger.info("Using fallback recommendation based on technical indicators")
+
+            # Generate a fallback recommendation based on technical indicators
+            fallback_recommendation = self._generate_fallback_recommendation(df)
+
+            # Add to DataFrame if needed
+            if not df.empty:
+                df.attrs["llm_analysis"] = fallback_recommendation
+
+            return fallback_recommendation
 
         try:
             # Prepare market data
@@ -739,25 +802,12 @@ AVAILABLE_MODELS = {
         "name": "llama-3-8b-instruct.Q4_K_M.gguf",
         "description": "Llama 3 8B Instruct (Quantized 4-bit)",
         "url": "https://huggingface.co/TheBloke/Llama-3-8B-Instruct-GGUF/resolve/main/llama-3-8b-instruct.Q4_K_M.gguf",
-        "repo_id": "TheBloke/Llama-3-8B-Instruct-GGUF",
-        "filename": "llama-3-8b-instruct.Q4_K_M.gguf",
         "size_gb": 4.37,
         "details": "General-purpose LLM with good performance across various tasks. Balanced between size and capability.",
-        "trading_focus": "Low",
+        "trading_focus": "Medium",
         "hardware_req": "8GB+ VRAM GPU recommended, can run on CPU",
         "strengths": "Versatile, good instruction following, reasonable size",
         "weaknesses": "Not specialized for financial analysis"
-    },
-    "llama3-70b": {
-        "name": "llama-3-70b-instruct.Q4_K_M.gguf",
-        "description": "Llama 3 70B Instruct (Quantized 4-bit)",
-        "url": "https://huggingface.co/TheBloke/Llama-3-70B-Instruct-GGUF/resolve/main/llama-3-70b-instruct.Q4_K_M.gguf",
-        "size_gb": 38.2,
-        "details": "Largest Llama 3 model with superior reasoning and knowledge. Requires significant hardware resources.",
-        "trading_focus": "Medium",
-        "hardware_req": "24GB+ VRAM GPU required, preferably 40GB+",
-        "strengths": "Excellent reasoning, deep knowledge, high accuracy",
-        "weaknesses": "Very large model size, slow inference, high resource requirements"
     },
     "mistral-7b": {
         "name": "mistral-7b-instruct-v0.2.Q4_K_M.gguf",
@@ -770,60 +820,27 @@ AVAILABLE_MODELS = {
         "strengths": "Efficient, good reasoning, smaller size",
         "weaknesses": "Less powerful than larger models for complex analysis"
     },
-    "phi3-mini": {
-        "name": "phi-3-mini-4k-instruct.Q4_K_M.gguf",
-        "description": "Phi-3 Mini 4K Instruct (Quantized 4-bit)",
-        "url": "https://huggingface.co/TheBloke/phi-3-mini-4k-instruct-GGUF/resolve/main/phi-3-mini-4k-instruct.Q4_K_M.gguf",
-        "size_gb": 1.91,
-        "details": "Microsoft's compact but powerful model. Excellent performance for its small size.",
-        "trading_focus": "Medium",
-        "hardware_req": "4GB+ VRAM GPU or modern CPU",
+    "phi2": {
+        "name": "phi-2.Q4_K_M.gguf",
+        "description": "Phi-2 (Quantized 4-bit)",
+        "url": "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
+        "size_gb": 1.35,
+        "details": "Microsoft's small but capable model. Good performance for its tiny size.",
+        "trading_focus": "Low",
+        "hardware_req": "4GB RAM is sufficient, runs well on CPU",
         "strengths": "Very small size, fast inference, runs on modest hardware",
         "weaknesses": "Limited context window, less powerful than larger models"
     },
-    "fingpt-forecaster": {
-        "name": "fingpt-forecaster_dow30_llama2-7b_lora.Q4_K_M.gguf",
-        "description": "FinGPT Forecaster - Trading recommendations with entry/exit points",
-        "url": "https://huggingface.co/FinGPT/fingpt-forecaster_dow30_llama2-7b_lora/resolve/main/fingpt-forecaster_dow30_llama2-7b_lora.Q4_K_M.gguf",
-        "size_gb": 4.2,
-        "details": "Specialized financial model fine-tuned for stock price forecasting and trading recommendations. Based on Llama2-7B.",
-        "trading_focus": "Very High",
-        "hardware_req": "8GB+ VRAM GPU recommended",
-        "strengths": "Provides specific entry/exit points with stoploss and take profit levels, trained on financial data",
-        "weaknesses": "Based on older Llama2 architecture, more specialized and less versatile for general tasks"
-    },
-    "hermes-llama3-financial": {
-        "name": "hermes-2-theta-llama-3-8b.Q4_K_M.gguf",
-        "description": "Hermes Llama 3 - Financial analysis and trading recommendations",
-        "url": "https://huggingface.co/NousResearch/Hermes-2-Theta-Llama-3-8B-GGUF/resolve/main/hermes-2-theta-llama-3-8b.Q4_K_M.gguf",
-        "size_gb": 4.8,
-        "details": "Llama 3 8B model fine-tuned for financial analysis and trading. Strong performance on financial data analysis.",
-        "trading_focus": "High",
-        "hardware_req": "8GB+ VRAM GPU recommended",
-        "strengths": "Good at interpreting price action patterns, provides trading recommendations based on technical analysis",
-        "weaknesses": "Larger file size than standard Llama 3 8B, less specialized than FinGPT"
-    },
-    "phi3-mini-financial": {
-        "name": "phi-3-mini-128k-instruct.Q4_K_M.gguf",
-        "description": "Phi-3 Mini - Efficient model for financial analysis",
-        "url": "https://huggingface.co/TheBloke/Phi-3-mini-128k-instruct-GGUF/resolve/main/phi-3-mini-128k-instruct.Q4_K_M.gguf",
-        "size_gb": 2.7,
-        "details": "Microsoft's Phi-3 mini model with extended context window. Excellent performance despite smaller size.",
-        "trading_focus": "Medium",
-        "hardware_req": "4GB+ VRAM GPU or modern CPU",
-        "strengths": "Very efficient for deployment on consumer hardware, good at pattern recognition in financial data",
-        "weaknesses": "Less powerful than larger models for complex analysis"
-    },
-    "mistral-financial": {
-        "name": "mistral-7b-instruct-v0.2-finance.Q4_K_M.gguf",
-        "description": "Mistral 7B - Financial fine-tuned version",
-        "url": "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-        "size_gb": 3.9,
-        "details": "Mistral 7B model fine-tuned on financial data. Strong performance on financial sentiment analysis.",
-        "trading_focus": "High",
-        "hardware_req": "8GB+ VRAM GPU recommended",
-        "strengths": "Good at interpreting market trends and price action, efficient deployment on consumer hardware",
-        "weaknesses": "Less specialized than FinGPT for specific trading recommendations"
+    "tinyllama": {
+        "name": "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+        "description": "TinyLlama 1.1B Chat (Quantized 4-bit)",
+        "url": "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+        "size_gb": 0.6,
+        "details": "Ultra-small model that can run on almost any hardware. Limited capabilities but very fast.",
+        "trading_focus": "Low",
+        "hardware_req": "2GB RAM is sufficient, runs on any modern CPU",
+        "strengths": "Extremely small size, very fast inference, minimal resource requirements",
+        "weaknesses": "Limited capabilities, basic analysis only"
     }
 }
 

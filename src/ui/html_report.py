@@ -15,21 +15,21 @@ logger = logging.getLogger(__name__)
 
 class HTMLReportGenerator:
     """Generate HTML reports for analysis results."""
-    
+
     def __init__(self, theme='dark'):
         """Initialize the HTML report generator."""
         self.theme = theme
         self.reports_dir = 'reports'
-        
+
         # Create reports directory if it doesn't exist
         if not os.path.exists(self.reports_dir):
             os.makedirs(self.reports_dir)
-    
-    def generate_report(self, df, symbol, timeframe, report_type='analysis', 
+
+    def generate_report(self, df, symbol, timeframe, report_type='analysis',
                         performance_metrics=None, trading_metrics=None):
         """
         Generate an HTML report for the given data.
-        
+
         Args:
             df (pd.DataFrame): DataFrame with analysis data
             symbol (str): Symbol being analyzed
@@ -37,7 +37,7 @@ class HTMLReportGenerator:
             report_type (str): Type of report ('analysis', 'prediction', 'backtest', 'all')
             performance_metrics (dict, optional): Performance metrics from backtest
             trading_metrics (dict, optional): Trading metrics from backtest
-            
+
         Returns:
             str: Path to the generated HTML report
         """
@@ -46,28 +46,28 @@ class HTMLReportGenerator:
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f"{symbol.replace('/', '_')}_{timeframe}_{report_type}_{timestamp}.html"
             report_path = os.path.join(self.reports_dir, filename)
-            
+
             # Generate HTML content
-            html_content = self._generate_html_content(df, symbol, timeframe, report_type, 
+            html_content = self._generate_html_content(df, symbol, timeframe, report_type,
                                                       performance_metrics, trading_metrics)
-            
+
             # Write HTML to file
             with open(report_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
-            
+
             logger.info(f"Report generated: {report_path}")
             return report_path
-        
+
         except Exception as e:
             logger.error(f"Error generating report: {e}")
             return None
-    
-    def _generate_html_content(self, df, symbol, timeframe, report_type, 
+
+    def _generate_html_content(self, df, symbol, timeframe, report_type,
                               performance_metrics, trading_metrics):
         """Generate the HTML content for the report."""
         # Get the latest data point
         latest = df.iloc[-1]
-        
+
         # Set theme colors
         if self.theme == 'dark':
             bg_color = '#1E1E1E'
@@ -87,7 +87,7 @@ class HTMLReportGenerator:
             positive_color = '#4CAF50'
             negative_color = '#F44336'
             neutral_color = '#9E9E9E'
-        
+
         # Start HTML content
         html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -226,7 +226,7 @@ class HTMLReportGenerator:
             <h1>{report_type.title()} Report - {symbol} ({timeframe})</h1>
             <p>Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         </div>
-        
+
         <div class="tab">
             <button class="tablinks active" onclick="openTab(event, 'Summary')">Summary</button>
             <button class="tablinks" onclick="openTab(event, 'Indicators')">Indicators</button>
@@ -235,7 +235,7 @@ class HTMLReportGenerator:
             <button class="tablinks" onclick="openTab(event, 'Performance')">Performance</button>
         </div>
 """
-        
+
         # Summary Tab
         html += f"""
         <div id="Summary" class="tabcontent" style="display: block;">
@@ -264,12 +264,12 @@ class HTMLReportGenerator:
                     </div>
                 </div>
             </div>
-            
+
             <div class="card">
                 <h2>Key Indicators</h2>
                 <div class="grid">
 """
-        
+
         # Add key indicators
         if 'rsi_14' in df.columns:
             rsi = latest['rsi_14']
@@ -281,7 +281,21 @@ class HTMLReportGenerator:
                         <div class="metric-value {rsi_class}">{rsi:.2f} - {rsi_signal}</div>
                     </div>
 """
-        
+
+        # Add MACD
+        if 'MACD_12_26_9' in df.columns and 'MACDs_12_26_9' in df.columns:
+            macd = latest['MACD_12_26_9']
+            macd_signal = latest['MACDs_12_26_9']
+            macd_hist = macd - macd_signal
+            macd_class = "positive" if macd > macd_signal else "negative"
+            macd_trend = "Bullish" if macd > macd_signal else "Bearish"
+            html += f"""
+                    <div class="metric">
+                        <div class="metric-name">MACD</div>
+                        <div class="metric-value {macd_class}">{macd:.4f} - {macd_trend} (H: {macd_hist:.4f})</div>
+                    </div>
+"""
+
         if 'ema_12' in df.columns and 'ema_26' in df.columns:
             ema_12 = latest['ema_12']
             ema_26 = latest['ema_26']
@@ -293,7 +307,7 @@ class HTMLReportGenerator:
                         <div class="metric-value {ema_class}">{ema_signal}</div>
                     </div>
 """
-        
+
         if 'MACD_12_26_9' in df.columns and 'MACDs_12_26_9' in df.columns:
             macd = latest['MACD_12_26_9']
             macd_signal = latest['MACDs_12_26_9']
@@ -306,7 +320,7 @@ class HTMLReportGenerator:
                         <div class="metric-value {macd_class}">{macd:.2f} - {macd_trend}</div>
                     </div>
 """
-        
+
         if 'BBL_20_2.0' in df.columns and 'BBM_20_2.0' in df.columns and 'BBU_20_2.0' in df.columns:
             bb_lower = latest['BBL_20_2.0']
             bb_middle = latest['BBM_20_2.0']
@@ -321,7 +335,7 @@ class HTMLReportGenerator:
                         <div class="metric-value {bb_class}">{bb_signal} ({bb_position:.1f}%)</div>
                     </div>
 """
-        
+
         # Add overall signal if available
         if 'signal' in df.columns:
             signal_value = latest['signal']
@@ -336,7 +350,7 @@ class HTMLReportGenerator:
                         <div class="metric-value {signal_class}">{signal_text}</div>
                     </div>
 """
-        
+
         # Add prediction if available
         if 'prediction' in df.columns:
             pred_value = latest['prediction']
@@ -349,13 +363,13 @@ class HTMLReportGenerator:
                         <div class="metric-value {pred_class}">{pred_text} ({pred_prob:.2f})</div>
                     </div>
 """
-        
+
         html += """
                 </div>
             </div>
         </div>
 """
-        
+
         # Indicators Tab
         html += """
         <div id="Indicators" class="tabcontent">
@@ -368,7 +382,7 @@ class HTMLReportGenerator:
                         <th>Signal</th>
                     </tr>
 """
-        
+
         # Add indicators to the table
         indicator_groups = {
             "Trend": ["ema_12", "ema_26", "sma_20", "sma_50", "sma_200", "adx_14"],
@@ -377,18 +391,18 @@ class HTMLReportGenerator:
             "Volume": ["volume", "obv", "cmf_20"],
             "Oscillators": ["MACD_12_26_9", "MACDs_12_26_9", "MACDh_12_26_9"]
         }
-        
+
         for group, indicators in indicator_groups.items():
             html += f"""
                     <tr>
                         <td colspan="3" style="background-color: rgba(0,0,0,0.2); font-weight: bold;">{group}</td>
                     </tr>
 """
-            
+
             for indicator in indicators:
                 if indicator in df.columns:
                     value = latest[indicator]
-                    
+
                     # Determine signal based on indicator
                     signal = "Neutral"
                     signal_class = "neutral"
@@ -407,13 +421,17 @@ class HTMLReportGenerator:
                     elif indicator == "BBP_20_2.0":
                         signal = "Oversold" if value < 0 else "Overbought" if value > 1 else "Neutral"
                         signal_class = "positive" if value < 0 else "negative" if value > 1 else "neutral"
-                    
+
                     # Format the value
                     if isinstance(value, (int, float)):
-                        formatted_value = f"{value:.4f}" if abs(value) < 10 else f"{value:.2f}"
+                        # Use 5 decimal places for price values
+                        if indicator in ['open', 'high', 'low', 'close', 'entry_price', 'stop_loss', 'take_profit'] or 'price' in indicator.lower():
+                            formatted_value = f"{value:.5f}"
+                        else:
+                            formatted_value = f"{value:.4f}" if abs(value) < 10 else f"{value:.2f}"
                     else:
                         formatted_value = str(value)
-                    
+
                     html += f"""
                     <tr>
                         <td>{indicator}</td>
@@ -421,20 +439,20 @@ class HTMLReportGenerator:
                         <td class="{signal_class}">{signal}</td>
                     </tr>
 """
-        
+
         html += """
                 </table>
             </div>
         </div>
 """
-        
+
         # Signals Tab
         html += """
         <div id="Signals" class="tabcontent">
             <div class="card">
                 <h2>Recent Trading Signals</h2>
 """
-        
+
         # Get signals from the dataframe
         if 'signal' not in df.columns:
             html += "<p>No trading signals available.</p>"
@@ -442,7 +460,7 @@ class HTMLReportGenerator:
             # Get recent signals (last 20 periods)
             recent_df = df.tail(20).copy()
             recent_df['date'] = recent_df.index
-            
+
             # Add signals table
             html += """
                 <table>
@@ -452,7 +470,7 @@ class HTMLReportGenerator:
                         <th>Close Price</th>
                     </tr>
 """
-            
+
             # Add signals
             for _, row in recent_df.iterrows():
                 if row['signal'] == 1:
@@ -463,7 +481,7 @@ class HTMLReportGenerator:
                     signal_class = "negative"
                 else:
                     continue  # Skip neutral signals
-                
+
                 date_str = str(row['date'])
                 price_str = f"{row['close']:.2f}"
                 html += f"""
@@ -473,17 +491,17 @@ class HTMLReportGenerator:
                         <td>{price_str}</td>
                     </tr>
 """
-            
+
             html += """
                 </table>
 """
-            
+
             # Add signal distribution
             buy_signals = len(df[df['signal'] == 1])
             sell_signals = len(df[df['signal'] == -1])
             neutral_signals = len(df[df['signal'] == 0])
             total_signals = buy_signals + sell_signals + neutral_signals
-            
+
             html += f"""
                 <h2>Signal Distribution</h2>
                 <div class="grid">
@@ -501,19 +519,19 @@ class HTMLReportGenerator:
                     </div>
                 </div>
 """
-        
+
         html += """
             </div>
         </div>
 """
-        
+
         # Predictions Tab
         html += """
         <div id="Predictions" class="tabcontent">
             <div class="card">
                 <h2>Recent Predictions</h2>
 """
-        
+
         # Check if predictions are available
         if 'prediction' not in df.columns:
             html += "<p>No predictions available.</p>"
@@ -521,7 +539,7 @@ class HTMLReportGenerator:
             # Get recent predictions (last 20 periods)
             recent_df = df.tail(20).copy()
             recent_df['date'] = recent_df.index
-            
+
             # Add predictions table
             html += """
                 <table>
@@ -532,7 +550,7 @@ class HTMLReportGenerator:
                         <th>Close Price</th>
                     </tr>
 """
-            
+
             # Add predictions
             for _, row in recent_df.iterrows():
                 date_str = str(row['date'])
@@ -542,7 +560,7 @@ class HTMLReportGenerator:
                 prob_value = row.get('prediction_probability', 0.5)
                 prob_str = f"{prob_value:.2f}"
                 price_str = f"{row['close']:.2f}"
-                
+
                 html += f"""
                     <tr>
                         <td>{date_str}</td>
@@ -551,16 +569,16 @@ class HTMLReportGenerator:
                         <td>{price_str}</td>
                     </tr>
 """
-            
+
             html += """
                 </table>
 """
-            
+
             # Add prediction distribution
             bullish_preds = len(df[df['prediction'] == 1])
             bearish_preds = len(df[df['prediction'] == 0])
             total_preds = bullish_preds + bearish_preds
-            
+
             html += f"""
                 <h2>Prediction Distribution</h2>
                 <div class="grid">
@@ -574,7 +592,7 @@ class HTMLReportGenerator:
                     </div>
                 </div>
 """
-            
+
             # Add prediction accuracy if target is available
             if 'target' in df.columns:
                 correct_preds = len(df[df['prediction'] == df['target']])
@@ -585,19 +603,19 @@ class HTMLReportGenerator:
                     <div class="metric-value">{accuracy:.2f}%</div>
                 </div>
 """
-        
+
         html += """
             </div>
         </div>
 """
-        
+
         # Performance Tab
         html += """
         <div id="Performance" class="tabcontent">
             <div class="card">
                 <h2>Backtest Performance</h2>
 """
-        
+
         if not performance_metrics and not trading_metrics:
             html += "<p>No performance metrics available.</p>"
         else:
@@ -612,7 +630,7 @@ class HTMLReportGenerator:
                         formatted_value = f"{value:.4f}" if abs(value) < 10 else f"{value:.2f}"
                     else:
                         formatted_value = str(value)
-                    
+
                     html += f"""
                     <div class="metric">
                         <div class="metric-name">{key.replace('_', ' ').title()}</div>
@@ -622,7 +640,7 @@ class HTMLReportGenerator:
                 html += """
                 </div>
 """
-            
+
             # Add trading metrics
             if trading_metrics:
                 html += """
@@ -643,7 +661,7 @@ class HTMLReportGenerator:
                     else:
                         formatted_value = str(value)
                         metric_class = "neutral"
-                    
+
                     html += f"""
                     <div class="metric">
                         <div class="metric-name">{key.replace('_', ' ').title()}</div>
@@ -653,16 +671,16 @@ class HTMLReportGenerator:
                 html += """
                 </div>
 """
-        
+
         html += """
             </div>
         </div>
 """
-        
+
         # End HTML content
         html += """
     </div>
-    
+
     <script>
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
@@ -681,9 +699,9 @@ class HTMLReportGenerator:
 </body>
 </html>
 """
-        
+
         return html
-    
+
     def open_report(self, report_path):
         """Open the report in the default web browser."""
         if report_path and os.path.exists(report_path):

@@ -713,7 +713,7 @@ class ChartGenerator:
             logger.error(f"Error creating interactive chart: {e}")
             return None
 
-    def create_advanced_chart_with_suggestions(self, df, llm_analysis=None, title='Advanced Trading Chart', include_volume=True):
+    def create_advanced_chart_with_suggestions(self, df, llm_analysis=None, title='Advanced Trading Chart', include_volume=True, timeframe=None):
         """
         Create an advanced interactive chart with entry/exit suggestions based on LLM analysis.
 
@@ -722,6 +722,7 @@ class ChartGenerator:
             llm_analysis (dict, optional): LLM analysis results with trading recommendations
             title (str): Chart title
             include_volume (bool): Whether to include volume chart
+            timeframe (str, optional): Timeframe of the data (e.g., '1h', '4h', '1d')
 
         Returns:
             plotly.graph_objects.Figure: The generated figure
@@ -735,6 +736,13 @@ class ChartGenerator:
             fig = self.create_interactive_chart(df, title, include_volume)
             if fig is None:
                 return None
+
+            # Extract timeframe from title if not provided explicitly
+            if not timeframe and ' - ' in title and 'Timeframe' in title:
+                title_parts = title.split(' - ')
+                if len(title_parts) > 1:
+                    timeframe_part = title_parts[1].split(' ')[0]
+                    timeframe = timeframe_part
 
             # If LLM analysis is provided, add entry/exit suggestions
             if llm_analysis and isinstance(llm_analysis, dict) and 'error' not in llm_analysis:
@@ -882,6 +890,229 @@ class ChartGenerator:
                             yanchor='bottom',
                             row=1, col=1
                         )
+
+            # Add prediction to the chart if available
+            if 'prediction' in df.columns:
+                # Get the latest prediction
+                latest_pred = df['prediction'].iloc[-1]
+                pred_text = "BULLISH" if latest_pred == 1 else "BEARISH"
+                pred_color = "green" if latest_pred == 1 else "red"
+
+                # Get prediction probability if available
+                pred_prob = 0.5
+                if 'prediction_probability' in df.columns:
+                    pred_prob = df['prediction_probability'].iloc[-1]
+
+                # Get the latest price for calculating entry, stop loss, and take profit
+                latest_price = df['close'].iloc[-1]
+
+                # Calculate entry, stop loss, and take profit based on prediction
+                # These are placeholder calculations - they should be replaced with actual model predictions
+                if pred_text == "BULLISH":
+                    entry_price = latest_price * 0.995  # Slightly below current price
+                    stop_loss = entry_price * 0.97     # 3% below entry
+                    take_profit = entry_price * 1.05   # 5% above entry
+                else:  # BEARISH
+                    entry_price = latest_price * 1.005  # Slightly above current price
+                    stop_loss = entry_price * 1.03     # 3% above entry
+                    take_profit = entry_price * 0.95   # 5% below entry
+
+                # Add prediction annotation in the upper left corner
+                fig.add_annotation(
+                    x=0,
+                    y=1,
+                    xref="paper",
+                    yref="paper",
+                    text=f"<b>PREDICTION: {pred_text}</b> ({pred_prob:.2f})",
+                    showarrow=False,
+                    font=dict(
+                        size=16,
+                        color=pred_color
+                    ),
+                    bgcolor='rgba(0,0,0,0.5)' if self.theme == 'dark' else 'rgba(255,255,255,0.5)',
+                    bordercolor=pred_color,
+                    borderwidth=2,
+                    borderpad=4,
+                    align='left',
+                    xanchor='left',
+                    yanchor='top'
+                )
+
+                # Add entry price line
+                fig.add_trace(
+                    go.Scatter(
+                        x=[df.index[0], df.index[-1]],
+                        y=[entry_price, entry_price],
+                        name='Entry Price',
+                        line=dict(color='yellow', width=2, dash='dash'),
+                        opacity=0.7
+                    ),
+                    row=1, col=1
+                )
+
+                # Add entry price annotation
+                fig.add_annotation(
+                    x=df.index[-1],
+                    y=entry_price,
+                    text=f"Entry: {entry_price:.2f}",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowcolor='yellow',
+                    arrowsize=1,
+                    arrowwidth=2,
+                    ax=70,
+                    ay=0,
+                    font=dict(color='yellow', size=12),
+                    row=1, col=1
+                )
+
+                # Add stop loss line
+                fig.add_trace(
+                    go.Scatter(
+                        x=[df.index[0], df.index[-1]],
+                        y=[stop_loss, stop_loss],
+                        name='Stop Loss',
+                        line=dict(color='red', width=2, dash='dash'),
+                        opacity=0.7
+                    ),
+                    row=1, col=1
+                )
+
+                # Add stop loss annotation
+                fig.add_annotation(
+                    x=df.index[-1],
+                    y=stop_loss,
+                    text=f"Stop Loss: {stop_loss:.2f}",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowcolor='red',
+                    arrowsize=1,
+                    arrowwidth=2,
+                    ax=70,
+                    ay=0,
+                    font=dict(color='red', size=12),
+                    row=1, col=1
+                )
+
+                # Add take profit line
+                fig.add_trace(
+                    go.Scatter(
+                        x=[df.index[0], df.index[-1]],
+                        y=[take_profit, take_profit],
+                        name='Take Profit',
+                        line=dict(color='green', width=2, dash='dash'),
+                        opacity=0.7
+                    ),
+                    row=1, col=1
+                )
+
+                # Add take profit annotation
+                fig.add_annotation(
+                    x=df.index[-1],
+                    y=take_profit,
+                    text=f"Take Profit: {take_profit:.2f}",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowcolor='green',
+                    arrowsize=1,
+                    arrowwidth=2,
+                    ax=70,
+                    ay=0,
+                    font=dict(color='green', size=12),
+                    row=1, col=1
+                )
+
+                # Calculate risk-reward ratio
+                risk_amount = abs(entry_price - stop_loss)
+                reward_amount = abs(take_profit - entry_price)
+                if risk_amount > 0:
+                    risk_reward_ratio = reward_amount / risk_amount
+
+                    # Add risk-reward ratio annotation
+                    fig.add_annotation(
+                        x=0,
+                        y=0.97,
+                        xref="paper",
+                        yref="paper",
+                        text=f"Risk/Reward: 1:{risk_reward_ratio:.2f}",
+                        showarrow=False,
+                        font=dict(
+                            size=14,
+                            color='white' if self.theme == 'dark' else 'black'
+                        ),
+                        bgcolor='rgba(0,0,0,0.5)' if self.theme == 'dark' else 'rgba(255,255,255,0.5)',
+                        bordercolor='gray',
+                        borderwidth=1,
+                        borderpad=4,
+                        align='left',
+                        xanchor='left',
+                        yanchor='top'
+                    )
+
+            # Add timeframe display in the upper right corner
+            if timeframe:
+                # Format current date and time
+                current_time = datetime.now().strftime("%b %d, %Y %H:%M UTC")
+
+                # Add timeframe annotation in the upper right corner
+                fig.add_annotation(
+                    x=1,
+                    y=1,
+                    xref="paper",
+                    yref="paper",
+                    text=f"<b>{timeframe}</b>",
+                    showarrow=False,
+                    font=dict(
+                        size=16,
+                        color='white' if self.theme == 'dark' else 'black'
+                    ),
+                    bgcolor='rgba(0,0,0,0.5)' if self.theme == 'dark' else 'rgba(255,255,255,0.5)',
+                    bordercolor='gray',
+                    borderwidth=1,
+                    borderpad=4,
+                    align='right',
+                    xanchor='right',
+                    yanchor='top'
+                )
+
+                # Add timestamp below the timeframe
+                fig.add_annotation(
+                    x=1,
+                    y=0.97,
+                    xref="paper",
+                    yref="paper",
+                    text=f"<i>{current_time}</i>",
+                    showarrow=False,
+                    font=dict(
+                        size=12,
+                        color='white' if self.theme == 'dark' else 'black'
+                    ),
+                    bgcolor='rgba(0,0,0,0.3)' if self.theme == 'dark' else 'rgba(255,255,255,0.3)',
+                    bordercolor='gray',
+                    borderwidth=1,
+                    borderpad=4,
+                    align='right',
+                    xanchor='right',
+                    yanchor='top'
+                )
+
+                # Add 3lacks branding
+                fig.add_annotation(
+                    x=1,
+                    y=0.94,
+                    xref="paper",
+                    yref="paper",
+                    text="3lack_Hands",
+                    showarrow=False,
+                    font=dict(
+                        size=12,
+                        color='white' if self.theme == 'dark' else 'black'
+                    ),
+                    bgcolor='rgba(0,0,0,0.0)',
+                    align='right',
+                    xanchor='right',
+                    yanchor='top'
+                )
 
             logger.info("Created advanced chart with entry/exit suggestions")
             return fig

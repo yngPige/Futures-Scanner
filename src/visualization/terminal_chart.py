@@ -87,13 +87,14 @@ class TerminalChartGenerator:
             traceback.print_exc()
             return False
 
-    def create_candlestick_chart(self, df, title='Candlestick Chart'):
+    def create_candlestick_chart(self, df, title='Candlestick Chart', timeframe=None):
         """
         Create a candlestick chart using Plotext.
 
         Args:
             df (pd.DataFrame): DataFrame with OHLCV data
             title (str): Chart title
+            timeframe (str, optional): Timeframe of the data (e.g., '1h', '4h', '1d')
 
         Returns:
             bool: True if chart was displayed successfully
@@ -116,6 +117,64 @@ class TerminalChartGenerator:
             plt.title(title)
             plt.xlabel("Date")
             plt.ylabel("Price")
+
+            # Extract timeframe from title if not provided explicitly
+            if not timeframe and ' - ' in title and 'Timeframe' in title:
+                title_parts = title.split(' - ')
+                if len(title_parts) > 1:
+                    timeframe_part = title_parts[1].split(' ')[0]
+                    timeframe = timeframe_part
+
+            # Add prediction to the chart if available
+            if 'prediction' in df.columns:
+                # Get the latest prediction
+                latest_pred = df['prediction'].iloc[-1]
+                pred_text = "BULLISH" if latest_pred == 1 else "BEARISH"
+                pred_color = "green" if latest_pred == 1 else "red"
+
+                # Get prediction probability if available
+                pred_prob = 0.5
+                if 'prediction_probability' in df.columns:
+                    pred_prob = df['prediction_probability'].iloc[-1]
+
+                # Get the latest price for calculating entry, stop loss, and take profit
+                latest_price = df['close'].iloc[-1]
+
+                # Calculate entry, stop loss, and take profit based on prediction
+                # These are placeholder calculations - they should be replaced with actual model predictions
+                if pred_text == "BULLISH":
+                    entry_price = latest_price * 0.995  # Slightly below current price
+                    stop_loss = entry_price * 0.97     # 3% below entry
+                    take_profit = entry_price * 1.05   # 5% above entry
+                else:  # BEARISH
+                    entry_price = latest_price * 1.005  # Slightly above current price
+                    stop_loss = entry_price * 1.03     # 3% above entry
+                    take_profit = entry_price * 0.95   # 5% below entry
+
+                # Add prediction text in the upper left corner
+                plt.text(dates[0], df['high'].max(), f"PREDICTION: {pred_text} ({pred_prob:.2f})", color=pred_color)
+
+                # Add horizontal lines for entry, stop loss, and take profit
+                plt.hline(entry_price, color="yellow")
+                plt.text(dates[0], entry_price, f"Entry: {entry_price:.2f}", color="yellow")
+
+                plt.hline(stop_loss, color="red")
+                plt.text(dates[0], stop_loss, f"Stop Loss: {stop_loss:.2f}", color="red")
+
+                plt.hline(take_profit, color="green")
+                plt.text(dates[0], take_profit, f"Take Profit: {take_profit:.2f}", color="green")
+
+                # Calculate risk-reward ratio
+                risk_amount = abs(entry_price - stop_loss)
+                reward_amount = abs(take_profit - entry_price)
+                if risk_amount > 0:
+                    risk_reward_ratio = reward_amount / risk_amount
+                    plt.text(dates[0], df['high'].max() * 0.97, f"Risk/Reward: 1:{risk_reward_ratio:.2f}")
+
+            # Add timeframe display in the upper right corner if available
+            if timeframe:
+                current_time = datetime.now().strftime("%b %d, %Y %H:%M UTC")
+                plt.text(dates[-1], df['high'].max(), f"{timeframe} | {current_time} | 3lack_Hands")
 
             # Create a dictionary with OHLC data
             data = {
@@ -140,7 +199,7 @@ class TerminalChartGenerator:
             traceback.print_exc()
             return False
 
-    def create_advanced_chart_with_suggestions(self, df, llm_analysis=None, title='Advanced Trading Chart'):
+    def create_advanced_chart_with_suggestions(self, df, llm_analysis=None, title='Advanced Trading Chart', timeframe=None):
         """
         Create an advanced chart with entry/exit suggestions using Plotext.
 
@@ -148,6 +207,7 @@ class TerminalChartGenerator:
             df (pd.DataFrame): DataFrame with OHLCV data
             llm_analysis (dict, optional): LLM analysis results with trading recommendations
             title (str): Chart title
+            timeframe (str, optional): Timeframe of the data (e.g., '1h', '4h', '1d')
 
         Returns:
             bool: True if chart was displayed successfully
@@ -170,6 +230,64 @@ class TerminalChartGenerator:
             plt.title(title)
             plt.xlabel("Date")
             plt.ylabel("Price")
+
+            # Extract timeframe from title if not provided explicitly
+            if not timeframe and ' - ' in title and 'Timeframe' in title:
+                title_parts = title.split(' - ')
+                if len(title_parts) > 1:
+                    timeframe_part = title_parts[1].split(' ')[0]
+                    timeframe = timeframe_part
+
+            # Add prediction to the chart if available
+            if 'prediction' in df.columns:
+                # Get the latest prediction
+                latest_pred = df['prediction'].iloc[-1]
+                pred_text = "BULLISH" if latest_pred == 1 else "BEARISH"
+                pred_color = "green" if latest_pred == 1 else "red"
+
+                # Get prediction probability if available
+                pred_prob = 0.5
+                if 'prediction_probability' in df.columns:
+                    pred_prob = df['prediction_probability'].iloc[-1]
+
+                # Get the latest price for calculating entry, stop loss, and take profit
+                latest_price = df['close'].iloc[-1]
+
+                # Calculate entry, stop loss, and take profit based on prediction
+                # These are placeholder calculations - they should be replaced with actual model predictions
+                if pred_text == "BULLISH":
+                    entry_price = latest_price * 0.995  # Slightly below current price
+                    stop_loss = entry_price * 0.97     # 3% below entry
+                    take_profit = entry_price * 1.05   # 5% above entry
+                else:  # BEARISH
+                    entry_price = latest_price * 1.005  # Slightly above current price
+                    stop_loss = entry_price * 1.03     # 3% above entry
+                    take_profit = entry_price * 0.95   # 5% below entry
+
+                # Add prediction text in the upper left corner
+                plt.text(dates[0], df['high'].max(), f"PREDICTION: {pred_text} ({pred_prob:.2f})", color=pred_color)
+
+                # Add horizontal lines for entry, stop loss, and take profit
+                plt.hline(entry_price, color="yellow")
+                plt.text(dates[0], entry_price, f"Entry: {entry_price:.2f}", color="yellow")
+
+                plt.hline(stop_loss, color="red")
+                plt.text(dates[0], stop_loss, f"Stop Loss: {stop_loss:.2f}", color="red")
+
+                plt.hline(take_profit, color="green")
+                plt.text(dates[0], take_profit, f"Take Profit: {take_profit:.2f}", color="green")
+
+                # Calculate risk-reward ratio
+                risk_amount = abs(entry_price - stop_loss)
+                reward_amount = abs(take_profit - entry_price)
+                if risk_amount > 0:
+                    risk_reward_ratio = reward_amount / risk_amount
+                    plt.text(dates[0], df['high'].max() * 0.97, f"Risk/Reward: 1:{risk_reward_ratio:.2f}")
+
+            # Add timeframe display in the upper right corner if available
+            if timeframe:
+                current_time = datetime.now().strftime("%b %d, %Y %H:%M UTC")
+                plt.text(dates[-1], df['high'].max(), f"{timeframe} | {current_time} | 3lack_Hands")
 
             # Create a dictionary with OHLC data
             data = {
