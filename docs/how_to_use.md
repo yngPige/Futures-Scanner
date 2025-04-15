@@ -47,7 +47,7 @@ When you start 3lacks Scanner, you'll see the main menu with the following optio
 - **3: Train Model** - Train a machine learning model for price prediction
 - **4: Make Predictions** - Use a trained model to predict future price movements
 - **5: Backtest Strategy** - Test a trading strategy on historical data
-- **6: Run All Steps** - Execute all the above steps in sequence
+- **6: Run All** - Execute all the above steps in sequence
 - **7: LLM Analysis** - Use AI to analyze market data and provide trading recommendations
 - **8: Settings** - Configure application settings
 - **q: Quit** - Exit the application
@@ -135,11 +135,11 @@ This step tests a trading strategy on historical data to evaluate its performanc
 - The Sharpe ratio measures risk-adjusted returns (higher is better)
 - Backtest results are saved to the `results` folder
 
-### 6. Running All Steps
+### 6. Running All
 
 This option executes all the above steps in sequence.
 
-1. From the main menu, press `6` to select "Run All Steps"
+1. From the main menu, press `6` to select "Run All"
 2. The application will:
    - Fetch data
    - Perform technical analysis

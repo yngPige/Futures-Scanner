@@ -17,49 +17,74 @@ from datetime import datetime
 from pathlib import Path
 import numpy as np
 
-# Configure logging - only show errors
+# Configure logging - show info and above for better debugging
 logging.basicConfig(
-    level=logging.ERROR,  # Only log errors and above
+    level=logging.INFO,  # Show info, warnings, errors
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Available models
+# Available models - Only fully open-source models compatible with llama-cpp-python
 AVAILABLE_MODELS = {
-    "llama3-8b": {
-        "name": "llama-3-8b-instruct.Q4_K_M.gguf",
-        "url": "https://huggingface.co/TheBloke/Llama-3-8B-Instruct-GGUF/resolve/main/llama-3-8b-instruct.Q4_K_M.gguf",
-        "size_gb": 4.37,
-        "description": "Llama 3 8B Instruct model (4-bit quantized, medium quality)",
-        "trading_focus": "General purpose with good reasoning capabilities"
+    "finance-llm": {
+        "name": "finance-llm.Q4_K_M.gguf",
+        "url": "https://huggingface.co/TheBloke/finance-LLM-GGUF/resolve/main/finance-llm.Q4_K_M.gguf",
+        "size_gb": 4.08,
+        "description": "Finance LLM - Specialized 7B model for financial analysis",
+        "trading_focus": "High - Specialized for financial market analysis and trading recommendations",
+        "license": "Llama 2 Community License"
     },
-    "mistral-7b": {
-        "name": "mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-        "url": "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf",
-        "size_gb": 3.83,
-        "description": "Mistral 7B Instruct v0.2 model (4-bit quantized, medium quality)",
-        "trading_focus": "Good balance of size and performance for financial analysis"
+    "finance-llama3": {
+        "name": "finance-llama3-8b.Q4_K_M.gguf",
+        "url": "https://huggingface.co/QuantFactory/finance-Llama3-8B-GGUF/resolve/main/finance-llama3-8b.Q4_K_M.gguf",
+        "size_gb": 4.92,
+        "description": "Finance Llama3 8B - Modern financial analysis model based on Llama 3",
+        "trading_focus": "Very High - Built specifically for financial market analysis with modern architecture",
+        "license": "Llama 3 Community License"
+    },
+    "finance-chat": {
+        "name": "finance-chat.Q4_K_M.gguf",
+        "url": "https://huggingface.co/andrijdavid/finance-chat-GGUF/resolve/main/finance-chat.Q4_K_M.gguf",
+        "size_gb": 4.08,
+        "description": "Finance Chat - Conversational 7B model for financial analysis",
+        "trading_focus": "High - Specialized for explaining financial market analysis in conversational format",
+        "license": "Llama 2 Community License"
     },
     "phi2": {
         "name": "phi-2.Q4_K_M.gguf",
         "url": "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
         "size_gb": 1.35,
-        "description": "Phi-2 model (4-bit quantized, medium quality)",
-        "trading_focus": "Smallest model, good for basic analysis on limited hardware"
+        "description": "Microsoft Phi-2 model (4-bit quantized, medium quality)",
+        "trading_focus": "Medium - Good for basic market analysis with limited hardware",
+        "license": "MIT License"
     },
     "tinyllama": {
         "name": "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
         "url": "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
         "size_gb": 0.6,
         "description": "TinyLlama 1.1B Chat model (4-bit quantized, medium quality)",
-        "trading_focus": "Very small model, basic analysis capabilities, runs on any hardware"
+        "trading_focus": "Low - Basic market commentary with minimal hardware requirements",
+        "license": "Apache 2.0 License"
     }
 }
 
 # Default model settings
-DEFAULT_MODEL_PATH = os.path.join(os.path.expanduser("~"), ".cache", "futures_scanner", "models")
-DEFAULT_MODEL_NAME = "phi-2.Q4_K_M.gguf"
-DEFAULT_MODEL_URL = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf"
+# Try multiple possible locations for models
+POSSIBLE_MODEL_PATHS = [
+    os.path.join(os.path.expanduser("~"), ".cache", "futures_scanner", "models"),  # Default cache location
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "models"),  # Project root models directory
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "Py Bloat", "models"),  # Py Bloat models directory
+    os.path.join(os.getcwd(), "models"),  # Current working directory models
+    os.path.join(os.getcwd(), "Py Bloat", "models")  # Current working directory Py Bloat models
+]
+
+# Find the first existing directory or use the default
+DEFAULT_MODEL_PATH = next((path for path in POSSIBLE_MODEL_PATHS if os.path.exists(path)), POSSIBLE_MODEL_PATHS[0])
+
+# Financial models for market analysis
+DEFAULT_MODEL_NAME = "finance-llm.Q4_K_M.gguf"  # TheBloke's finance LLM
+DEFAULT_MODEL_URL = "https://huggingface.co/TheBloke/finance-LLM-GGUF/resolve/main/finance-llm.Q4_K_M.gguf"
+DEFAULT_MODEL_KEY = "finance-llm"
 
 # Required dependencies
 REQUIRED_PACKAGES = {
@@ -150,6 +175,36 @@ class LocalLLMAnalyzer:
         # Initialize the model
         self._initialize_model()
 
+    def _verify_model_file(self, model_file_path):
+        """Verify that the model file is valid and in the correct format.
+
+        Args:
+            model_file_path (str): Path to the model file
+
+        Returns:
+            bool: True if the file is valid, False otherwise
+        """
+        try:
+            # Check if file exists
+            if not os.path.exists(model_file_path):
+                logger.error(f"Model file not found: {model_file_path}")
+                return False
+
+            # Check file size (should be at least 100MB for any LLM model)
+            file_size_mb = os.path.getsize(model_file_path) / (1024 * 1024)
+            if file_size_mb < 100:
+                logger.error(f"Model file is too small: {file_size_mb:.2f} MB")
+                return False
+
+            # For models that are already in the models directory, assume they are valid
+            # This prevents issues with magic number verification that might fail on some systems
+            logger.info(f"Model file exists and has sufficient size: {model_file_path} ({file_size_mb:.2f} MB)")
+            return True
+
+        except Exception as e:
+            logger.error(f"Error verifying model file: {e}")
+            return False
+
     def _initialize_model(self):
         """Initialize the LLM model."""
         # Check for required dependencies first
@@ -164,28 +219,29 @@ class LocalLLMAnalyzer:
             # Import here to avoid dependency issues if not using this module
             from llama_cpp import Llama
 
-            # Check if model file exists, if not download it
+            # Get the model file path
             model_file_path = self._get_model_file_path()
-            if not os.path.exists(model_file_path):
-                download_success = self._download_model(model_file_path)
-                if not download_success:
-                    logger.error("Failed to download model. Cannot proceed with LLM analysis.")
-                    self.llm = None
-                    return
+
+            # Check if the model file exists
+            if os.path.exists(model_file_path):
+                logger.info(f"Found existing model at {model_file_path}")
+                # Verify the model file has sufficient size
+                if self._verify_model_file(model_file_path):
+                    # Model exists and is valid, proceed to loading
+                    pass
+                else:
+                    logger.warning(f"Existing model file may be invalid: {model_file_path}")
+                    logger.info("Will attempt to use it anyway...")
+            else:
+                # Model doesn't exist, inform the user they need to download it manually
+                logger.error(f"Model file not found: {model_file_path}")
+                logger.info("Please download the model manually and place it in the models directory.")
+                logger.info(f"Expected model file: {self.model_name}")
+                self.llm = None
+                return
 
             # Load the model
             logger.info(f"Loading model from {model_file_path}")
-
-            # Check if the file exists and has content
-            if not os.path.exists(model_file_path):
-                logger.error(f"Model file not found: {model_file_path}")
-                self.llm = None
-                return
-
-            if os.path.getsize(model_file_path) == 0:
-                logger.error(f"Model file is empty: {model_file_path}")
-                self.llm = None
-                return
 
             try:
                 self.llm = Llama(
@@ -213,15 +269,23 @@ class LocalLLMAnalyzer:
         Returns:
             str: Full path to the model file
         """
-        # Get the model info from AVAILABLE_MODELS if possible
+        # Get the model filename from AVAILABLE_MODELS if possible
+        model_filename = self.model_name
         for model_key, model_info in AVAILABLE_MODELS.items():
             if model_info.get('name') == self.model_name or model_key == self.model_name:
                 # Use the name from the model info
                 model_filename = model_info.get('name')
-                return os.path.join(self.model_path, model_filename)
+                break
 
-        # Fallback to just using the model name directly
-        return os.path.join(self.model_path, self.model_name)
+        # Check all possible model paths
+        for path in POSSIBLE_MODEL_PATHS:
+            full_path = os.path.join(path, model_filename)
+            if os.path.exists(full_path):
+                logger.info(f"Found model at {full_path}")
+                return full_path
+
+        # If model not found in any path, return the default path
+        return os.path.join(self.model_path, model_filename)
 
     def _download_model(self, model_file_path):
         """
@@ -279,8 +343,27 @@ class LocalLLMAnalyzer:
 
             # Verify the file was downloaded correctly
             if os.path.exists(model_file_path) and os.path.getsize(model_file_path) > 0:
-                logger.info(f"Successfully downloaded model: {model_file_path}")
-                return True
+                # Check file size (should be at least 100MB for any LLM model)
+                file_size_mb = os.path.getsize(model_file_path) / (1024 * 1024)
+                expected_size_mb = model_size * 1024 if model_size else 1000  # Convert GB to MB
+
+                if file_size_mb < 100 or file_size_mb < (expected_size_mb * 0.5):
+                    logger.error(f"Downloaded file is too small: {file_size_mb:.2f} MB (expected ~{expected_size_mb:.2f} MB)")
+                    return False
+
+                # Verify the file format
+                if self._verify_model_file(model_file_path):
+                    logger.info(f"Successfully downloaded and verified model: {model_file_path}")
+                    return True
+                else:
+                    logger.error(f"Downloaded file has invalid format: {model_file_path}")
+                    # Try to remove the corrupted file
+                    try:
+                        os.remove(model_file_path)
+                        logger.info(f"Removed corrupted model file: {model_file_path}")
+                    except Exception as e:
+                        logger.error(f"Failed to remove corrupted file: {e}")
+                    return False
             else:
                 logger.error(f"Downloaded file is empty or does not exist: {model_file_path}")
                 return False

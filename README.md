@@ -54,7 +54,7 @@ The application uses a user-friendly terminal UI:
 3. Train Model
 4. Make Predictions
 5. Backtest Strategy
-6. Run All Steps
+6. Run All
 7. LLM Analysis
 8. Settings
 ```

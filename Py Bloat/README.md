@@ -113,7 +113,7 @@ python main.py --mode predict --exchange kraken --symbol BTC/USDT --timeframe 1h
 python main.py --mode backtest --exchange kraken --symbol BTC/USDT --timeframe 1h --model-path models/your_model.joblib --save
 ```
 
-### Run All Steps
+### Run All
 
 ```
 python main.py --mode all --exchange kraken --symbol BTC/USDT --timeframe 1h --model-type random_forest --save

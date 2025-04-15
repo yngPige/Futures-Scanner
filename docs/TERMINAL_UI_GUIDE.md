@@ -28,7 +28,7 @@ The main menu provides access to all the main functions of the application:
 3. **Train Model** - Train a machine learning model for predictions
 4. **Make Predictions** - Use a trained model to make predictions
 5. **Backtest Strategy** - Test the performance of the predictions
-6. **Run All Steps** - Execute all the above steps in sequence
+6. **Run All** - Execute all the above steps in sequence
 7. **Settings** - Configure application settings
 q. **Quit** - Exit the application
 
@@ -60,7 +60,7 @@ Here's a typical workflow using the terminal UI:
 5. Make predictions using the trained model (option 4)
 6. Backtest the predictions to evaluate performance (option 5)
 
-Alternatively, you can use the "Run All Steps" option (option 6) to execute all these steps in sequence.
+Alternatively, you can use the "Run All" option (option 6) to execute all these steps in sequence.
 
 ## Tips
 

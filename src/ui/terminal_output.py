@@ -101,10 +101,6 @@ class TerminalOutputGenerator:
         content += f"echo Volume: {latest.get('volume', 'N/A'):.0f}\n"
         content += "echo.\n"
 
-        # Add key indicators and metrics section in a combined format
-        content += "echo KEY INDICATORS & METRICS\n"
-        content += "echo ---------------------\n"
-
         # Create a two-column layout for indicators and metrics
         left_column = []
         right_column = []
@@ -158,8 +154,6 @@ class TerminalOutputGenerator:
             right_item = right_column[i]
             content += f"echo {left_item}{' ' * (40 - len(left_item))}{right_item}\n"
 
-        content += "echo.\n"
-
         # Add overall signal if available
         if 'signal' in df.columns:
             signal_value = latest['signal']
@@ -168,7 +162,6 @@ class TerminalOutputGenerator:
                          "Strong Sell" if signal_value < -0.6 else \
                          "Sell" if signal_value < 0 else "Neutral"
             content += f"echo OVERALL SIGNAL: {signal_text}\n"
-            content += "echo.\n"
 
         # Add prediction if available
         if 'prediction' in df.columns:
@@ -176,7 +169,12 @@ class TerminalOutputGenerator:
             pred_prob = latest.get('prediction_probability', 0.5)
             pred_text = "Bullish" if pred_value == 1 else "Bearish"
             content += f"echo PREDICTION: {pred_text} (Confidence: {pred_prob:.2f})\n"
-            content += "echo.\n"
+
+        content += "echo.\n"
+
+        # Add key indicators and metrics section in a combined format
+        content += "echo KEY INDICATORS & METRICS\n"
+        content += "echo ---------------------\n"
 
         # Add recent signals section
         if 'signal' in df.columns:
@@ -286,11 +284,6 @@ class TerminalOutputGenerator:
         content += f"echo -e \"Low:    {latest.get('low', 'N/A'):.5f}\"\n"
         content += f"echo -e \"Close:  {latest.get('close', 'N/A'):.5f}\"\n"
         content += f"echo -e \"Volume: {latest.get('volume', 'N/A'):.0f}\"\n"
-        content += "echo\n"
-
-        # Add key indicators section
-        content += "echo -e \"$BOLD$YELLOW KEY INDICATORS $RESET\"\n"
-        content += "echo -e \"$YELLOW -------------$RESET\"\n"
 
         # Add RSI
         if 'rsi_14' in df.columns:
@@ -351,8 +344,6 @@ class TerminalOutputGenerator:
 
             content += f"echo -e \"Bollinger Bands: {bb_color}{bb_signal}$RESET (Position: {bb_position:.1f}%)\"\n"
 
-        content += "echo\n"
-
         # Add overall signal if available
         if 'signal' in df.columns:
             signal_value = latest['signal']
@@ -374,7 +365,6 @@ class TerminalOutputGenerator:
                 signal_color = "$WHITE"
 
             content += f"echo -e \"$BOLD OVERALL SIGNAL: {signal_color}{signal_text}$RESET\"\n"
-            content += "echo\n"
 
         # Add prediction if available
         if 'prediction' in df.columns:
@@ -390,44 +380,50 @@ class TerminalOutputGenerator:
 
             content += f"echo -e \"$BOLD PREDICTION: {pred_color}{pred_text}$RESET (Confidence: {pred_prob:.2f})\"\n"
 
-            # Add entry/exit points with TP/SL levels if available
-            if all(col in df.columns for col in ['entry_price', 'stop_loss', 'take_profit', 'risk_reward']):
-                content += "echo\n"
-                content += "echo -e \"$BOLD$YELLOW KEY METRICS                      TRADING LEVELS $RESET\"\n"
-                content += "echo -e \"$YELLOW ----------                      -------------- $RESET\"\n"
+        content += "echo\n"
 
-                # RSI and Entry Price side by side
-                if 'rsi_14' in df.columns:
-                    rsi = latest['rsi_14']
-                    rsi_status = "Oversold" if rsi < 30 else "Overbought" if rsi > 70 else "Neutral"
-                    rsi_color = "$RED" if rsi < 30 else "$GREEN" if rsi > 70 else "$WHITE"
-                    content += f"echo -e \"RSI (14): {rsi_color}{rsi:.2f}$RESET                     Entry Price: {latest['entry_price']:.5f}\"\n"
-                else:
-                    content += f"echo -e \"                                  Entry Price: {latest['entry_price']:.5f}\"\n"
+        # Add key indicators section
+        content += "echo -e \"$BOLD$YELLOW KEY INDICATORS & METRICS $RESET\"\n"
+        content += "echo -e \"$YELLOW ----------------------$RESET\"\n"
 
-                # MACD and Stop Loss side by side
-                if all(col in df.columns for col in ['MACD_12_26_9', 'MACDs_12_26_9']):
-                    macd = latest['MACD_12_26_9']
-                    signal = latest['MACDs_12_26_9']
-                    macd_color = "$GREEN" if macd > signal else "$RED"
-                    content += f"echo -e \"MACD: {macd_color}{macd:.4f}$RESET                   Stop Loss: $RED{latest['stop_loss']:.5f}$RESET\"\n"
-                else:
-                    content += f"echo -e \"                                  Stop Loss: $RED{latest['stop_loss']:.5f}$RESET\"\n"
-
-                # Moving Averages and Take Profit side by side
-                if 'sma_50' in df.columns and 'sma_200' in df.columns:
-                    sma_50 = latest['sma_50']
-                    sma_200 = latest['sma_200']
-                    ma_status = "Golden Cross" if sma_50 > sma_200 else "Death Cross"
-                    ma_color = "$GREEN" if sma_50 > sma_200 else "$RED"
-                    content += f"echo -e \"MA Cross: {ma_color}{ma_status}$RESET                Take Profit: $GREEN{latest['take_profit']:.5f}$RESET\"\n"
-                else:
-                    content += f"echo -e \"                                  Take Profit: $GREEN{latest['take_profit']:.5f}$RESET\"\n"
-
-                # Volume and Risk/Reward side by side
-                content += f"echo -e \"Volume: {latest.get('volume', 'N/A'):.0f}                     Risk/Reward: 1:{latest['risk_reward']:.2f}\"\n"
-
+        # Add entry/exit points with TP/SL levels if available
+        if all(col in df.columns for col in ['entry_price', 'stop_loss', 'take_profit', 'risk_reward']):
             content += "echo\n"
+            content += "echo -e \"$BOLD$YELLOW KEY METRICS                      TRADING LEVELS $RESET\"\n"
+            content += "echo -e \"$YELLOW ----------                      -------------- $RESET\"\n"
+
+            # RSI and Entry Price side by side
+            if 'rsi_14' in df.columns:
+                rsi = latest['rsi_14']
+                rsi_status = "Oversold" if rsi < 30 else "Overbought" if rsi > 70 else "Neutral"
+                rsi_color = "$RED" if rsi < 30 else "$GREEN" if rsi > 70 else "$WHITE"
+                content += f"echo -e \"RSI (14): {rsi_color}{rsi:.2f}$RESET                     Entry Price: {latest['entry_price']:.5f}\"\n"
+            else:
+                content += f"echo -e \"                                  Entry Price: {latest['entry_price']:.5f}\"\n"
+
+            # MACD and Stop Loss side by side
+            if all(col in df.columns for col in ['MACD_12_26_9', 'MACDs_12_26_9']):
+                macd = latest['MACD_12_26_9']
+                signal = latest['MACDs_12_26_9']
+                macd_color = "$GREEN" if macd > signal else "$RED"
+                content += f"echo -e \"MACD: {macd_color}{macd:.4f}$RESET                   Stop Loss: $RED{latest['stop_loss']:.5f}$RESET\"\n"
+            else:
+                content += f"echo -e \"                                  Stop Loss: $RED{latest['stop_loss']:.5f}$RESET\"\n"
+
+            # Moving Averages and Take Profit side by side
+            if 'sma_50' in df.columns and 'sma_200' in df.columns:
+                sma_50 = latest['sma_50']
+                sma_200 = latest['sma_200']
+                ma_status = "Golden Cross" if sma_50 > sma_200 else "Death Cross"
+                ma_color = "$GREEN" if sma_50 > sma_200 else "$RED"
+                content += f"echo -e \"MA Cross: {ma_color}{ma_status}$RESET                Take Profit: $GREEN{latest['take_profit']:.5f}$RESET\"\n"
+            else:
+                content += f"echo -e \"                                  Take Profit: $GREEN{latest['take_profit']:.5f}$RESET\"\n"
+
+            # Volume and Risk/Reward side by side
+            content += f"echo -e \"Volume: {latest.get('volume', 'N/A'):.0f}                     Risk/Reward: 1:{latest['risk_reward']:.2f}\"\n"
+
+        content += "echo\n"
 
         # Add recent signals section
         if 'signal' in df.columns:
@@ -561,6 +557,11 @@ class TerminalOutputGenerator:
             bool: True if successful, False otherwise
         """
         try:
+            # Skip duplicate output if this is the 'all' report type
+            # The individual components will be shown by the run_all_steps method
+            if report_type == 'all':
+                return True
+
             # Get the latest data point
             latest = df.iloc[-1]
 
@@ -578,7 +579,45 @@ class TerminalOutputGenerator:
             print(f"High:   {latest.get('high', 'N/A'):.5f}")
             print(f"Low:    {latest.get('low', 'N/A'):.5f}")
             print(f"Close:  {latest.get('close', 'N/A'):.5f}")
-            print(f"Volume: {latest.get('volume', 'N/A'):.0f}\n")
+            print(f"Volume: {latest.get('volume', 'N/A'):.0f}")
+
+            # Print overall signal if available
+            if 'signal' in df.columns:
+                signal_value = latest['signal']
+
+                if signal_value > 0.6:
+                    signal_text = "Strong Buy"
+                    signal_color = Fore.GREEN
+                elif signal_value > 0:
+                    signal_text = "Buy"
+                    signal_color = Fore.GREEN
+                elif signal_value < -0.6:
+                    signal_text = "Strong Sell"
+                    signal_color = Fore.RED
+                elif signal_value < 0:
+                    signal_text = "Sell"
+                    signal_color = Fore.RED
+                else:
+                    signal_text = "Neutral"
+                    signal_color = Fore.WHITE
+
+                print(f"OVERALL SIGNAL: {signal_color}{signal_text}{Style.RESET_ALL}")
+
+            # Print prediction if available
+            if 'prediction' in df.columns:
+                pred_value = latest['prediction']
+                pred_prob = latest.get('prediction_probability', 0.5)
+
+                if pred_value == 1:
+                    pred_text = "Bullish"
+                    pred_color = Fore.GREEN
+                else:
+                    pred_text = "Bearish"
+                    pred_color = Fore.RED
+
+                print(f"PREDICTION: {pred_color}{pred_text}{Style.RESET_ALL} (Confidence: {pred_prob:.2f})")
+
+            print()
 
             # Print key indicators and metrics section in a combined format
             print(f"{Fore.YELLOW}KEY INDICATORS & METRICS{Style.RESET_ALL}")
@@ -623,14 +662,6 @@ class TerminalOutputGenerator:
                 bb_color = Fore.RED if price < lower else Fore.GREEN if price > upper else Fore.WHITE
                 left_column.append(f"BB: {bb_color}{bb_status}{Style.RESET_ALL} ({bb_position:.1f}%)")
 
-            # Add Stochastic to left column
-            if 'stoch_14_3_3' in df.columns and 'stochd_14_3_3' in df.columns:
-                stoch_k = latest['stoch_14_3_3']
-                stoch_d = latest['stochd_14_3_3']
-                stoch_status = "Oversold" if stoch_k < 20 and stoch_d < 20 else "Overbought" if stoch_k > 80 and stoch_d > 80 else "Neutral"
-                stoch_color = Fore.RED if stoch_k < 20 and stoch_d < 20 else Fore.GREEN if stoch_k > 80 and stoch_d > 80 else Fore.WHITE
-                left_column.append(f"Stoch: {stoch_color}{stoch_status}{Style.RESET_ALL} (K: {stoch_k:.2f}, D: {stoch_d:.2f})")
-
             # Add entry/exit points with TP/SL levels if available to right column
             if all(col in df.columns for col in ['entry_price', 'stop_loss', 'take_profit', 'risk_reward']):
                 right_column.append(f"Entry Price: {Fore.CYAN}{latest['entry_price']:.5f}{Style.RESET_ALL}")
@@ -653,117 +684,11 @@ class TerminalOutputGenerator:
 
             print()
 
-            # Print overall signal if available
-            if 'signal' in df.columns:
-                signal_value = latest['signal']
-
-                if signal_value > 0.6:
-                    signal_text = "Strong Buy"
-                    signal_color = Fore.GREEN
-                elif signal_value > 0:
-                    signal_text = "Buy"
-                    signal_color = Fore.GREEN
-                elif signal_value < -0.6:
-                    signal_text = "Strong Sell"
-                    signal_color = Fore.RED
-                elif signal_value < 0:
-                    signal_text = "Sell"
-                    signal_color = Fore.RED
-                else:
-                    signal_text = "Neutral"
-                    signal_color = Fore.WHITE
-
-                print(f"OVERALL SIGNAL: {signal_color}{signal_text}{Style.RESET_ALL}\n")
-
-            # Print prediction if available
-            if 'prediction' in df.columns:
-                pred_value = latest['prediction']
-                pred_prob = latest.get('prediction_probability', 0.5)
-
-                if pred_value == 1:
-                    pred_text = "Bullish"
-                    pred_color = Fore.GREEN
-                else:
-                    pred_text = "Bearish"
-                    pred_color = Fore.RED
-
-                print(f"PREDICTION: {pred_color}{pred_text}{Style.RESET_ALL} (Confidence: {pred_prob:.2f})\n")
-
-                # Print entry/exit points with TP/SL levels if available
-                if all(col in df.columns for col in ['entry_price', 'stop_loss', 'take_profit', 'risk_reward']):
-                    # Create a side-by-side display for Trading Metrics and Trading Levels
-                    print(f"{Fore.YELLOW}KEY METRICS{Style.RESET_ALL}                      {Fore.YELLOW}TRADING LEVELS{Style.RESET_ALL}")
-                    print(f"{Fore.YELLOW}----------{Style.RESET_ALL}                      {Fore.YELLOW}--------------{Style.RESET_ALL}")
-
-                    # Display RSI and Entry Price side by side
-                    if 'rsi_14' in df.columns:
-                        rsi = latest['rsi_14']
-                        rsi_status = "Oversold" if rsi < 30 else "Overbought" if rsi > 70 else "Neutral"
-                        rsi_color = Fore.RED if rsi < 30 else Fore.GREEN if rsi > 70 else Fore.WHITE
-                        print(f"RSI (14): {rsi_color}{rsi:.2f}{Style.RESET_ALL}                     Entry Price: {latest['entry_price']:.5f}")
-                    else:
-                        print(f"                                  Entry Price: {latest['entry_price']:.5f}")
-
-                    # Display MACD and Stop Loss side by side
-                    if all(col in df.columns for col in ['MACD_12_26_9', 'MACDs_12_26_9']):
-                        macd = latest['MACD_12_26_9']
-                        signal = latest['MACDs_12_26_9']
-                        macd_status = "Bullish" if macd > signal else "Bearish"
-                        macd_color = Fore.GREEN if macd > signal else Fore.RED
-                        print(f"MACD: {macd_color}{macd:.4f}{Style.RESET_ALL}                   Stop Loss: {Fore.RED}{latest['stop_loss']:.5f}{Style.RESET_ALL}")
-                    else:
-                        print(f"                                  Stop Loss: {Fore.RED}{latest['stop_loss']:.5f}{Style.RESET_ALL}")
-
-                    # Display Moving Averages and Take Profit side by side
-                    if 'sma_50' in df.columns and 'sma_200' in df.columns:
-                        sma_50 = latest['sma_50']
-                        sma_200 = latest['sma_200']
-                        ma_status = "Golden Cross" if sma_50 > sma_200 else "Death Cross"
-                        ma_color = Fore.GREEN if sma_50 > sma_200 else Fore.RED
-                        print(f"MA Cross: {ma_color}{ma_status}{Style.RESET_ALL}                Take Profit: {Fore.GREEN}{latest['take_profit']:.5f}{Style.RESET_ALL}")
-                    else:
-                        print(f"                                  Take Profit: {Fore.GREEN}{latest['take_profit']:.5f}{Style.RESET_ALL}")
-
-                    # Display Volume and Risk/Reward side by side
-                    print(f"Volume: {latest.get('volume', 'N/A'):.0f}                     Risk/Reward: 1:{latest['risk_reward']:.2f}\n")
-
-            # Print recent signals section
-            if 'signal' in df.columns:
-                print(f"{Fore.YELLOW}RECENT SIGNALS{Style.RESET_ALL}")
-                print(f"{Fore.YELLOW}--------------{Style.RESET_ALL}")
-                print("Date                    Signal    Close")
-                print("---------------------------------------")
-
-                # Get recent signals (last 10 periods)
-                recent_df = df.tail(10).copy()
-                recent_df['date'] = recent_df.index
-
-                # Add signals
-                signal_count = 0
-                for _, row in recent_df.iterrows():
-                    if row['signal'] == 1:
-                        signal_text = "BUY"
-                        signal_color = Fore.GREEN
-                    elif row['signal'] == -1:
-                        signal_text = "SELL"
-                        signal_color = Fore.RED
-                    else:
-                        continue  # Skip neutral signals
-
-                    date_str = str(row['date'])
-                    price_str = f"{row['close']:.5f}"
-                    print(f"{date_str}    {signal_color}{signal_text}{Style.RESET_ALL}      {price_str}")
-                    signal_count += 1
-
-                if signal_count == 0:
-                    print("No recent signals found.")
-
-                print()
-
-            # Print performance metrics if available
+            # Print performance metrics if available in a compact format
             if performance_metrics or trading_metrics:
-                print(f"{Fore.YELLOW}PERFORMANCE METRICS{Style.RESET_ALL}")
-                print(f"{Fore.YELLOW}-------------------{Style.RESET_ALL}")
+                # Create a two-column layout for metrics
+                perf_metrics = []
+                trade_metrics = []
 
                 if performance_metrics:
                     for key, value in performance_metrics.items():
@@ -771,12 +696,9 @@ class TerminalOutputGenerator:
                             formatted_value = f"{value:.4f}" if abs(value) < 10 else f"{value:.2f}"
                         else:
                             formatted_value = str(value)
-                        print(f"{key.replace('_', ' ').title()}: {formatted_value}")
+                        perf_metrics.append(f"{key.replace('_', ' ').title()}: {formatted_value}")
 
                 if trading_metrics:
-                    print()
-                    print(f"{Fore.YELLOW}TRADING METRICS{Style.RESET_ALL}")
-                    print(f"{Fore.YELLOW}--------------{Style.RESET_ALL}")
                     for key, value in trading_metrics.items():
                         if isinstance(value, (int, float)):
                             if key in ['strategy_return', 'buy_hold_return', 'annualized_strategy_return', 'annualized_buy_hold_return']:
@@ -788,9 +710,27 @@ class TerminalOutputGenerator:
                                 formatted_value = f"{value:.4f}" if abs(value) < 10 else f"{value:.2f}"
                         else:
                             formatted_value = str(value)
-                        print(f"{key.replace('_', ' ').title()}: {formatted_value}")
+                        trade_metrics.append(f"{key.replace('_', ' ').title()}: {formatted_value}")
 
-                print()
+                # Print metrics in a compact format
+                if perf_metrics or trade_metrics:
+                    print(f"{Fore.YELLOW}PERFORMANCE & TRADING METRICS{Style.RESET_ALL}")
+                    print(f"{Fore.YELLOW}---------------------------{Style.RESET_ALL}")
+
+                    # Ensure both columns have the same number of items
+                    max_metrics = max(len(perf_metrics), len(trade_metrics))
+                    perf_metrics.extend([''] * (max_metrics - len(perf_metrics)))
+                    trade_metrics.extend([''] * (max_metrics - len(trade_metrics)))
+
+                    # Print metrics side by side
+                    for i in range(max_metrics):
+                        left_metric = perf_metrics[i] if i < len(perf_metrics) else ''
+                        right_metric = trade_metrics[i] if i < len(trade_metrics) else ''
+                        # Remove ANSI color codes for length calculation
+                        left_clean = left_metric.replace(Fore.RED, '').replace(Fore.GREEN, '').replace(Fore.WHITE, '').replace(Fore.YELLOW, '').replace(Style.RESET_ALL, '')
+                        print(f"{left_metric}{' ' * (40 - len(left_clean))}{right_metric}")
+
+                    print()
 
             return True
 
