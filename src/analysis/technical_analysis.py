@@ -321,6 +321,37 @@ class TechnicalAnalyzer:
             logger.error(f"Error generating signals: {e}")
             return df
 
+    def analyze(self, df):
+        """
+        Perform complete technical analysis on the DataFrame.
+        This is a convenience method that calls add_all_indicators and generate_signals.
+
+        Args:
+            df (pd.DataFrame): DataFrame with OHLCV data
+
+        Returns:
+            pd.DataFrame: DataFrame with all indicators and signals
+        """
+        if df.empty:
+            logger.warning("Empty DataFrame provided, cannot analyze")
+            return df
+
+        try:
+            # Add all indicators
+            df_with_indicators = self.add_all_indicators(df)
+
+            # Generate signals
+            df_with_signals = self.generate_signals(df_with_indicators)
+
+            logger.info("Successfully analyzed data")
+            return df_with_signals
+
+        except Exception as e:
+            logger.error(f"Error analyzing data: {e}")
+            import traceback
+            traceback.print_exc()
+            return df
+
 
 # Example usage
 if __name__ == "__main__":

@@ -305,12 +305,95 @@ class TerminalChartGenerator:
                 # Get the latest price
                 latest_price = df['close'].iloc[-1]
 
-                # Extract entry/exit levels from LLM analysis
-                entry_price = llm_analysis.get('entry_price')
-                stop_loss = llm_analysis.get('stop_loss')
-                take_profit = llm_analysis.get('take_profit')
-                recommendation = llm_analysis.get('recommendation', 'NEUTRAL')
-                risk = llm_analysis.get('risk', 'MEDIUM')
+                # Extract sentiment and risk from LLM analysis
+                sentiment = llm_analysis.get('sentiment', 'neutral').upper()
+                risk = llm_analysis.get('risk', 'medium').upper()
+
+                # Try to extract entry/exit levels from LLM analysis text
+                analysis_text = llm_analysis.get('analysis', '')
+
+                # Initialize variables
+                entry_price = None
+                stop_loss = None
+                take_profit = None
+
+                # Try to extract price levels from the analysis text
+                try:
+                    # Look for support/resistance levels
+                    if 'support' in analysis_text.lower():
+                        support_idx = analysis_text.lower().find('support')
+                        support_text = analysis_text[support_idx:support_idx+100]
+                        # Extract numbers from the text
+                        import re
+                        numbers = re.findall(r'\d+\.\d+', support_text)
+                        if numbers:
+                            # Use the first number as stop loss for bullish, or entry for bearish
+                            if sentiment == 'BULLISH':
+                                stop_loss = float(numbers[0])
+                            else:
+                                entry_price = float(numbers[0])
+
+                    if 'resistance' in analysis_text.lower():
+                        resistance_idx = analysis_text.lower().find('resistance')
+                        resistance_text = analysis_text[resistance_idx:resistance_idx+100]
+                        # Extract numbers from the text
+                        import re
+                        numbers = re.findall(r'\d+\.\d+', resistance_text)
+                        if numbers:
+                            # Use the first number as take profit for bullish, or stop loss for bearish
+                            if sentiment == 'BULLISH':
+                                take_profit = float(numbers[0])
+                            else:
+                                stop_loss = float(numbers[0])
+
+                    # If we couldn't extract from support/resistance, look for entry/exit points
+                    if 'entry' in analysis_text.lower() and not entry_price:
+                        entry_idx = analysis_text.lower().find('entry')
+                        entry_text = analysis_text[entry_idx:entry_idx+100]
+                        # Extract numbers from the text
+                        import re
+                        numbers = re.findall(r'\d+\.\d+', entry_text)
+                        if numbers:
+                            entry_price = float(numbers[0])
+
+                    if 'exit' in analysis_text.lower() and not take_profit:
+                        exit_idx = analysis_text.lower().find('exit')
+                        exit_text = analysis_text[exit_idx:exit_idx+100]
+                        # Extract numbers from the text
+                        import re
+                        numbers = re.findall(r'\d+\.\d+', exit_text)
+                        if numbers:
+                            take_profit = float(numbers[0])
+
+                    if 'stop' in analysis_text.lower() and not stop_loss:
+                        stop_idx = analysis_text.lower().find('stop')
+                        stop_text = analysis_text[stop_idx:stop_idx+100]
+                        # Extract numbers from the text
+                        import re
+                        numbers = re.findall(r'\d+\.\d+', stop_text)
+                        if numbers:
+                            stop_loss = float(numbers[0])
+                except Exception as e:
+                    logger.warning(f"Error extracting price levels from LLM analysis: {e}")
+
+                # If we still don't have values, use default calculations
+                if not entry_price:
+                    if sentiment == 'BULLISH':
+                        entry_price = latest_price * 0.995  # Slightly below current price
+                    else:  # BEARISH or NEUTRAL
+                        entry_price = latest_price * 1.005  # Slightly above current price
+
+                if not stop_loss:
+                    if sentiment == 'BULLISH':
+                        stop_loss = entry_price * 0.97     # 3% below entry
+                    else:  # BEARISH or NEUTRAL
+                        stop_loss = entry_price * 1.03     # 3% above entry
+
+                if not take_profit:
+                    if sentiment == 'BULLISH':
+                        take_profit = entry_price * 1.05   # 5% above entry
+                    else:  # BEARISH or NEUTRAL
+                        take_profit = entry_price * 0.95   # 5% below entry
 
                 # Add horizontal lines for entry, stop loss, and take profit
                 if entry_price and isinstance(entry_price, (int, float)):
@@ -325,8 +408,8 @@ class TerminalChartGenerator:
                     plt.hline(take_profit, color="green")
                     plt.text(dates[0], take_profit, f"Target: {take_profit:.2f}")
 
-                # Add recommendation and risk as text
-                plt.text(dates[0], df['high'].max(), f"Recommendation: {recommendation} | Risk: {risk}")
+                # Add sentiment and risk as text
+                plt.text(dates[0], df['high'].max(), f"Sentiment: {sentiment} | Risk: {risk}")
 
                 # Calculate risk-reward ratio if both stop loss and take profit are available
                 if stop_loss and take_profit and entry_price and isinstance(stop_loss, (int, float)) and isinstance(take_profit, (int, float)) and isinstance(entry_price, (int, float)):

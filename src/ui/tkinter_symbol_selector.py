@@ -53,6 +53,11 @@ class TkinterSymbolSelector:
         self.root.resizable(True, True)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
+        # Make sure the window appears on top and gets focus
+        self.root.attributes("-topmost", True)
+        self.root.update()
+        self.root.attributes("-topmost", False)
+
         # Set theme
         self.style = ttk.Style()
         self.style.theme_use('clam')  # Use a modern theme
@@ -113,14 +118,30 @@ class TkinterSymbolSelector:
         self.search_frame = ttk.Frame(self.main_frame)
         self.search_frame.pack(fill=tk.X, pady=5)
 
-        # Search label
-        ttk.Label(self.search_frame, text="Search:").pack(side=tk.LEFT, padx=5)
+        # Search label with larger font
+        ttk.Label(self.search_frame, text="Search:", font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
 
-        # Search entry with placeholder text
+        # Search entry with placeholder text - using larger font and more visible styling
         self.search_var = tk.StringVar()
-        self.search_entry = ttk.Entry(self.search_frame, textvariable=self.search_var, width=30)
+        self.search_entry = ttk.Entry(self.search_frame, textvariable=self.search_var, width=30, font=("Arial", 11))
         self.search_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
         self.search_var.trace_add("write", self.on_search_changed)
+
+        # Make the search entry more visible with custom styling
+        style = ttk.Style()
+        style.configure('Search.TEntry',
+                       fieldbackground='#303030',
+                       foreground='white',
+                       borderwidth=2,
+                       relief='solid',
+                       font=('Arial', 11))
+        style.map('Search.TEntry',
+                  fieldbackground=[('focus', '#404040'), ('!focus', '#303030')],
+                  foreground=[('focus', 'white'), ('!focus', 'white')],
+                  bordercolor=[('focus', '#00BFFF'), ('!focus', '#555555')])
+
+        # Apply the custom style
+        self.search_entry.configure(style='Search.TEntry')
 
         # Add focus/blur events to handle placeholder text
         self.search_entry.bind("<FocusIn>", self.on_search_focus_in)
@@ -610,10 +631,16 @@ class TkinterSymbolSelector:
 
     def _set_focus_and_clear_placeholder(self):
         """Set focus to the search entry and clear placeholder text."""
-        self.search_entry.focus_set()
+        # Force focus on the search entry
+        self.search_entry.focus_force()
+
+        # Clear placeholder text
         if self.search_var.get() == "Type to search...":
             self.search_entry.delete(0, tk.END)
             self.search_entry.config(foreground="white")
+
+        # Make sure the cursor is visible
+        self.search_entry.icursor(tk.END)
 
     # We no longer need the find_alternative_symbol method since we only show available symbols
 
@@ -636,7 +663,11 @@ class TkinterSymbolSelector:
         self.root.geometry(f"{width}x{height}+{x}+{y}")
 
         # Set focus to the search entry box and clear placeholder text
-        self.root.after(100, self._set_focus_and_clear_placeholder)
+        # Use a longer delay to ensure the window is fully rendered
+        self.root.after(300, self._set_focus_and_clear_placeholder)
+
+        # Also bind to the window appearing event for more reliable focus
+        self.root.bind("<Map>", lambda _: self.root.after(100, self._set_focus_and_clear_placeholder))
 
         # Run the main loop
         self.root.mainloop()

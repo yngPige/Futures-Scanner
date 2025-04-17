@@ -47,13 +47,22 @@ def save_dataframe(df, filepath, format='csv'):
         format (str): File format ('csv', 'parquet', or 'pickle')
 
     Returns:
-        bool: True if successful, False otherwise
+        str: Path to the saved file if successful, None otherwise
     """
     try:
         # Create directory if it doesn't exist
         directory = os.path.dirname(filepath)
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
+
+        # Check if filepath has the correct extension
+        ext = os.path.splitext(filepath)[1].lower()
+        if format.lower() == 'csv' and ext != '.csv':
+            filepath = f"{filepath}.csv"
+        elif format.lower() == 'parquet' and ext != '.parquet':
+            filepath = f"{filepath}.parquet"
+        elif format.lower() == 'pickle' and ext not in ['.pkl', '.pickle']:
+            filepath = f"{filepath}.pkl"
 
         # Save DataFrame
         if format.lower() == 'csv':
@@ -64,13 +73,13 @@ def save_dataframe(df, filepath, format='csv'):
             df.to_pickle(filepath)
         else:
             logger.error(f"Unsupported format: {format}")
-            return False
+            return None
 
         logger.info(f"Saved DataFrame to {filepath}")
-        return True
+        return filepath
     except Exception as e:
         logger.error(f"Error saving DataFrame to {filepath}: {e}")
-        return False
+        return None
 
 def load_dataframe(filepath, format=None):
     """
@@ -87,6 +96,7 @@ def load_dataframe(filepath, format=None):
     try:
         # Infer format from file extension if not provided
         if format is None:
+            # Check if filepath has an extension
             ext = os.path.splitext(filepath)[1].lower()
             if ext == '.csv':
                 format = 'csv'
@@ -95,8 +105,11 @@ def load_dataframe(filepath, format=None):
             elif ext in ['.pkl', '.pickle']:
                 format = 'pickle'
             else:
-                logger.error(f"Could not infer format from extension: {ext}")
-                return None
+                # If no extension or unrecognized extension, assume it's a CSV file
+                # and append .csv to the filepath
+                logger.warning(f"No recognized extension in {filepath}, assuming CSV format")
+                filepath = f"{filepath}.csv"
+                format = 'csv'
 
         # Load DataFrame
         if format.lower() == 'csv':
