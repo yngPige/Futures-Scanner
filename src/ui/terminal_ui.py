@@ -7,12 +7,16 @@ This module provides a terminal-based user interface for the Crypto Futures Scan
 import os
 import sys
 import time
+import json
 import logging
 import argparse
+import pandas as pd
 from datetime import datetime
 from colorama import init, Fore, Back, Style
 from src.ui.terminal_output import TerminalOutputGenerator
 from src.config import get_pybloat_path, pybloat_file_exists, PYBLOAT_DIR
+from src.utils.helpers import (save_settings, load_settings, load_analysis_from_cache,
+                             save_analysis_to_cache, get_previous_analyses, load_previous_analysis)
 
 # No keyboard module needed anymore
 
@@ -52,31 +56,26 @@ class TerminalUI:
             'exchange': 'kraken',  # Changed default to kraken
             'model_type': 'random_forest',
             'model_path': None,
-            'theme': 'dark',
             'save': True,
             'tune': False,
-            'use_llm': True,  # LLM Analysis enabled by default
-            'llm_model': 'phi2',
             'use_gpu': True   # GPU Acceleration enabled by default
         }
+
+        # Load saved settings if available
+        self.load_saved_settings()
 
         # Track completed functions
         self.completed_functions = {
             'fetch_data': False,
-            'analyze_data': False,
             'train_model': False,
             'make_predictions': False,
-            'backtest_strategy': False,
-            'llm_analysis': False
+            'backtest_strategy': False
         }
 
-        # Create terminal output generator
-        self.output_generator = TerminalOutputGenerator(theme=self.settings['theme'])
+        # Create terminal output generator with dark theme
+        self.output_generator = TerminalOutputGenerator(theme='dark')
 
-        # Initialize the LLM model at startup if LLM analysis is enabled
-        self.llm_analyzer = None
-        if self.settings['use_llm']:
-            self.preload_llm_model()
+        # LLM functionality removed
 
         # Available options
         # Define base cryptocurrencies
@@ -105,10 +104,6 @@ class TerminalUI:
             'random_forest', 'gradient_boosting'
         ]
 
-        self.available_themes = [
-            'dark', 'light'
-        ]
-
         self.available_exchanges = [
             'CCXT:ALL', 'kraken', 'kucoin', 'huobi'
         ]
@@ -116,80 +111,7 @@ class TerminalUI:
         # Load available models
         self.refresh_available_models()
 
-    def preload_llm_model(self):
-        """Preload the LLM model at startup."""
-        try:
-            # Import required modules
-            self._import_from_pybloat()
-            from src.analysis.local_llm import LocalLLMAnalyzer, AVAILABLE_MODELS, DEFAULT_MODEL_PATH, POSSIBLE_MODEL_PATHS
-            import os
-
-            # Get model info
-            model_info = AVAILABLE_MODELS.get(self.settings['llm_model'], {})
-            model_name = model_info.get('name', self.settings['llm_model'])
-            model_size = model_info.get('size_gb', 'unknown')
-
-            # Define loading animation logs
-            loading_logs = [
-                "Checking model availability...",
-                "Searching for models in system...",
-                "Preparing model environment...",
-                "Loading model weights...",
-                "Initializing neural network...",
-                "Setting up inference engine...",
-                "Optimizing memory usage...",
-                "Configuring model parameters...",
-                "Preparing model context...",
-                "Model ready for inference..."
-            ]
-
-            # Configure GPU usage
-            n_gpu_layers = 0
-            if self.settings['use_gpu']:
-                print(f"{Fore.BLUE}GPU acceleration enabled for LLM inference.{Style.RESET_ALL}\n")
-                n_gpu_layers = -1  # Use all layers on GPU
-
-            # Show loading animation
-            self.show_loading_animation("Loading LLM model", duration=3, log_messages=loading_logs)
-
-            # Initialize the analyzer
-            self.llm_analyzer = LocalLLMAnalyzer(
-                model_name=model_name,
-                n_gpu_layers=n_gpu_layers
-            )
-
-            # Check if model was loaded successfully
-            if self.llm_analyzer.llm is not None:
-                self.print_success("\nLLM model loaded successfully and ready for analysis!")
-            else:
-                self.print_warning("\nLLM model could not be loaded. LLM analysis will be disabled.")
-
-                # Check if model exists in any of the possible paths
-                model_found = False
-                for path in POSSIBLE_MODEL_PATHS:
-                    model_path = os.path.join(path, model_name)
-                    if os.path.exists(model_path):
-                        model_found = True
-                        self.print_info(f"Found model at: {model_path}")
-                        break
-
-                if not model_found:
-                    self.print_info("\nNo LLM model found in any of the expected locations.")
-                    self.print_info(f"Please download the model '{model_name}' and place it in one of these directories:")
-                    for path in POSSIBLE_MODEL_PATHS:
-                        self.print_info(f"- {path}")
-                else:
-                    self.print_info("\nPossible reasons for loading failure:")
-                    self.print_info("1. The model file might be corrupted or in an incompatible format")
-                    self.print_info("2. Your system might not have enough memory to load the model")
-                    self.print_info("3. The llama-cpp-python library might not be properly installed")
-
-                self.settings['use_llm'] = False
-
-        except Exception as e:
-            self.print_error(f"Error loading LLM model: {e}")
-            self.print_warning("LLM analysis will be disabled.")
-            self.settings['use_llm'] = False
+    # LLM functionality removed
 
     def refresh_available_models(self):
         """Refresh the list of available models."""
@@ -213,6 +135,62 @@ class TerminalUI:
     def clear_screen(self):
         """Clear the terminal screen."""
         os.system('cls' if os.name == 'nt' else 'clear')
+
+    def show_please_wait_animation(self, message="Preparing summary", duration=3):
+        """Show a 'Please Wait' animation with a rotating globe.
+
+        Args:
+            message (str): Message to display
+            duration (int): Duration in seconds
+        """
+        # ASCII frames for rotating globe animation
+        globe_frames = [
+            "  o  ",
+            "  O  ",
+            " (O) ",
+            "(O)  ",
+            " (O) ",
+            "  O  "
+        ]
+
+        # ASCII frames for loading bar
+        loading_chars = ["▰", "▱"]
+
+        # Clear the screen and print header
+        self.clear_screen()
+        self.print_header("Blacks Scanner - Analysis Complete")
+
+        # Print the title with the message
+        width = 80
+        print(f"{Fore.CYAN}{message.center(width)}{Style.RESET_ALL}\n")
+
+        # Calculate animation parameters
+        start_time = time.time()
+        frame_duration = 0.1  # seconds per frame
+        bar_width = 40
+
+        # Run the animation for the specified duration
+        while time.time() - start_time < duration:
+            elapsed = time.time() - start_time
+            progress = min(1.0, elapsed / duration)
+
+            # Get the current globe frame
+            frame_idx = int((elapsed / frame_duration) % len(globe_frames))
+            globe = globe_frames[frame_idx]
+
+            # Create the loading bar
+            filled = int(bar_width * progress)
+            bar = "".join([loading_chars[0]] * filled + [loading_chars[1]] * (bar_width - filled))
+
+            # Print the animation frame
+            print(f"\r{Fore.CYAN}{globe}{Style.RESET_ALL} {Fore.GREEN}{bar}{Style.RESET_ALL} {int(progress * 100)}%", end="")
+
+            # Sleep briefly
+            time.sleep(0.1)
+
+        # Clear the animation line
+        print("\r" + " " * 100, end="\r")
+        print("\n")
 
     def print_header(self, title):
         """Print a header with the given title."""
@@ -304,7 +282,7 @@ class TerminalUI:
                 "Validating data integrity...",
                 "Optimizing analysis parameters...",
                 "Applying machine learning models...",
-                "Finalizing results..."
+                "Finalizing analysis..."
             ]
 
         # Create a list to store displayed logs for this animation
@@ -433,12 +411,8 @@ class TerminalUI:
             ("Limit", self.settings['limit']),
             ("Exchange", self.settings['exchange']),
             ("Model Type", self.settings['model_type']),
-            ("Model Path", self.settings['model_path'] or "None"),
-            ("Theme", self.settings['theme']),
             ("Save", self.settings['save']),
             ("Tune", self.settings['tune']),
-            ("Use LLM", self.settings['use_llm']),
-            ("LLM Model", self.settings['llm_model']),
             ("Use GPU", self.settings['use_gpu'])
         ]
 
@@ -459,15 +433,13 @@ class TerminalUI:
                 check_mark = ""
                 if desc == "Fetch Data" and self.completed_functions.get('fetch_data'):
                     check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
-                elif desc == "Analyze Data" and self.completed_functions.get('analyze_data'):
-                    check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
                 elif desc == "Train Model" and self.completed_functions.get('train_model'):
                     check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
                 elif desc == "Make Predictions" and self.completed_functions.get('make_predictions'):
                     check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
                 elif desc == "Backtest Strategy" and self.completed_functions.get('backtest_strategy'):
                     check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
-                elif desc == "LLM Analysis" and self.completed_functions.get('llm_analysis'):
+                elif desc == "Run Analysis" and all(self.completed_functions.values()):
                     check_mark = f"{Fore.GREEN} ✓{Style.RESET_ALL}"
 
                 menu_str = f"{Fore.GREEN}{key}{Style.RESET_ALL}: {desc}{check_mark}"
@@ -488,38 +460,41 @@ class TerminalUI:
     def main_menu(self):
         """Display the main menu."""
         menu_items = [
-            ("1", "Fetch Data"),
-            ("2", "Analyze Data"),
+            ("1", "Run Analysis"),
+            ("2", "Fetch Data"),
             ("3", "Train Model"),
             ("4", "Make Predictions"),
             ("5", "Backtest Strategy"),
-            ("6", "Run All"),
-            ("7", "LLM Analysis"),
-            ("8", "Settings"),
+            ("p", "Previous Analyses"),
+            ("s", "Change Symbol"),
+            ("l", "Change Data Limit"),
+            ("6", "Settings"),
             ("c", "Clear Data"),
             ("h", "How to Use"),
             ("q", "Quit")
         ]
 
-        self.print_menu_with_settings(menu_items, "3lacks Scanner - Main Menu")
+        self.print_menu_with_settings(menu_items, "Blacks Scanner - Main Menu")
 
         choice = self.get_input("Enter your choice: ")
 
         if choice == '1':
-            self.fetch_data()
+            self.run_all_steps()
         elif choice == '2':
-            self.analyze_data()
+            self.fetch_data()
         elif choice == '3':
             self.train_model()
         elif choice == '4':
             self.make_predictions()
         elif choice == '5':
             self.backtest_strategy()
+        elif choice.lower() == 'p':
+            self.show_previous_analyses()
+        elif choice.lower() == 's':
+            self.change_symbol()
+        elif choice.lower() == 'l':
+            self.change_limit()
         elif choice == '6':
-            self.run_all_steps()
-        elif choice == '7':
-            self.llm_analysis()
-        elif choice == '8':
             self.current_menu = self.settings_menu
         elif choice.lower() == 'c':
             self.clear_data()
@@ -535,19 +510,14 @@ class TerminalUI:
     def settings_menu(self):
         """Display the settings menu."""
         menu_items = [
-            ("1", "Change Symbol"),
-            ("2", "Change Timeframe"),
-            ("3", "Change Data Limit"),
-            ("4", "Change Exchange"),
-            ("5", "Change Model Type"),
-            ("6", "Select Model Path"),
-            ("7", "Change Theme"),
-            ("8", "Change LLM Model"),
-            ("r", "Remove All LLM Models"),
+            ("1", "Change Timeframe"),
+            ("2", "Change Data Limit"),
+            ("3", "Change Exchange"),
+            ("4", "Change Model Type"),
+            ("5", "Select Model Path"),
             ("g", "Toggle GPU Acceleration"),
             ("s", "Toggle Save Results"),
             ("t", "Toggle Hyperparameter Tuning"),
-            ("l", "Toggle LLM Analysis"),
             ("b", "Back to Main Menu")
         ]
 
@@ -562,30 +532,24 @@ class TerminalUI:
             elif key == 't':
                 status = f"{Fore.GREEN}ON{Style.RESET_ALL}" if self.settings['tune'] else "OFF"
                 menu_items[i] = (key, f"Toggle Hyperparameter Tuning [{status}]")
-            elif key == 'l':
-                status = f"{Fore.GREEN}ON{Style.RESET_ALL}" if self.settings['use_llm'] else "OFF"
-                menu_items[i] = (key, f"Toggle LLM Analysis [{status}]")
 
-        self.print_menu_with_settings(menu_items, "3lacks Scanner - Settings")
+
+        self.print_menu_with_settings(menu_items, "Blacks Scanner - Settings")
 
         choice = self.get_input("Enter your choice: ")
 
         if choice == '1':
-            self.change_symbol()
-        elif choice == '2':
             self.change_timeframe()
-        elif choice == '3':
+        elif choice == '2':
             self.change_limit()
-        elif choice == '4':
+        elif choice == '3':
             self.change_exchange()
-        elif choice == '5':
+        elif choice == '4':
             self.change_model_type()
-        elif choice == '6':
+        elif choice == '5':
             self.select_model_path()
-        elif choice == '7':
-            self.change_theme()
-        elif choice == '8':
-            self.change_llm_model()
+
+
         elif choice.lower() == 'g':
             self.settings['use_gpu'] = not self.settings['use_gpu']
             self.print_success(f"GPU Acceleration {'enabled' if self.settings['use_gpu'] else 'disabled'}.")
@@ -616,12 +580,6 @@ class TerminalUI:
                 self.settings['tune'] = False
                 self.print_success("Hyperparameter Tuning disabled.")
             time.sleep(1)
-        elif choice.lower() == 'l':
-            self.settings['use_llm'] = not self.settings['use_llm']
-            self.print_success(f"LLM Analysis {'enabled' if self.settings['use_llm'] else 'disabled'}.")
-            time.sleep(1)
-        elif choice.lower() == 'r':
-            self.remove_all_llm_models()
         elif choice.lower() == 'b':
             self.current_menu = self.main_menu
         else:
@@ -816,9 +774,34 @@ class TerminalUI:
 
         print("Available models:")
         for i, model_path in enumerate(self.available_models, 1):
-            print(f"{i}. {os.path.basename(model_path)}")
+            model_filename = os.path.basename(model_path)
+            # Shorten long filenames
+            if len(model_filename) > 25:
+                # Extract the symbol and model type from the filename
+                parts = model_filename.split('_')
+                if len(parts) >= 3:
+                    # Format: symbol_modeltype_timestamp.joblib
+                    symbol = parts[0]
+                    model_type = parts[1]
+                    # Get just the date part of the timestamp (first 8 chars)
+                    date_part = parts[2][:8] if len(parts[2]) > 8 else parts[2]
+                    model_filename = f"{symbol}_{model_type}_{date_part}.joblib"
+            print(f"{i}. {Fore.CYAN}{model_filename}{Style.RESET_ALL}")
 
-        print(f"\nCurrent model path: {self.settings['model_path']}")
+        # Display current model path if set
+        if self.settings['model_path']:
+            current_model = os.path.basename(self.settings['model_path'])
+            # Shorten if needed
+            if len(current_model) > 25:
+                parts = current_model.split('_')
+                if len(parts) >= 3:
+                    symbol = parts[0]
+                    model_type = parts[1]
+                    date_part = parts[2][:8] if len(parts[2]) > 8 else parts[2]
+                    current_model = f"{symbol}_{model_type}_{date_part}.joblib"
+            print(f"\nCurrent model: {Fore.GREEN}{current_model}{Style.RESET_ALL}")
+        else:
+            print(f"\nNo model currently selected.")
 
         choice = self.get_input("\nEnter model number (or 'b' to go back): ")
 
@@ -837,79 +820,9 @@ class TerminalUI:
 
         time.sleep(1)
 
-    def change_theme(self):
-        """Change the theme setting."""
-        self.print_header("Change Theme")
+    # Theme change functionality removed
 
-        print("Available themes:")
-        for i, theme in enumerate(self.available_themes, 1):
-            print(f"{i}. {theme}")
-
-        print(f"\nCurrent theme: {self.settings['theme']}")
-
-        choice = self.get_input("\nEnter theme number (or 'b' to go back): ")
-
-        if choice.lower() == 'b':
-            return
-
-        try:
-            index = int(choice) - 1
-            if 0 <= index < len(self.available_themes):
-                self.settings['theme'] = self.available_themes[index]
-                self.print_success(f"Theme changed to {self.settings['theme']}.")
-            else:
-                self.print_error("Invalid choice. Please try again.")
-        except ValueError:
-            self.print_error("Invalid input. Please enter a number.")
-
-        time.sleep(1)
-
-    def display_model_details(self, model_key, model_info):
-        """Display detailed information about a model."""
-        # Create a box for the model details
-        width = 80
-        print("\n" + "=" * width)
-        print(f"{Fore.CYAN}{model_key.upper()} MODEL DETAILS{Style.RESET_ALL}".center(width))
-        print("=" * width)
-
-        # Basic information
-        print(f"{Fore.YELLOW}Description:{Style.RESET_ALL} {model_info['description']}")
-        print(f"{Fore.YELLOW}File Size:{Style.RESET_ALL} {model_info['size_gb']:.2f} GB")
-        print(f"{Fore.YELLOW}File Name:{Style.RESET_ALL} {model_info['name']}")
-        print(f"{Fore.YELLOW}License:{Style.RESET_ALL} {model_info.get('license', 'Unknown')}")
-        print(f"{Fore.YELLOW}Trading Focus:{Style.RESET_ALL} {model_info.get('trading_focus', 'General purpose')}")
-
-        # Detailed information
-        print("\n" + "-" * width)
-        print(f"{Fore.CYAN}COMPATIBILITY INFORMATION{Style.RESET_ALL}".center(width))
-        print("-" * width)
-        print(f"{Fore.YELLOW}Format:{Style.RESET_ALL} GGUF (Compatible with llama-cpp-python)")
-        print(f"{Fore.YELLOW}Source:{Style.RESET_ALL} {model_info.get('url', 'Unknown')}")
-
-        # Hardware requirements
-        print("\n" + "-" * width)
-        print(f"{Fore.CYAN}HARDWARE REQUIREMENTS{Style.RESET_ALL}".center(width))
-        print("-" * width)
-        print(f"{Fore.YELLOW}Minimum RAM:{Style.RESET_ALL} {model_info['size_gb'] * 2:.1f} GB recommended")
-        print(f"{Fore.YELLOW}GPU Acceleration:{Style.RESET_ALL} {'Recommended' if model_info['size_gb'] > 1.5 else 'Optional'}")
-
-        # Usage tips
-        print("\n" + "-" * width)
-        print(f"{Fore.CYAN}USAGE TIPS{Style.RESET_ALL}".center(width))
-        print("-" * width)
-        print(f"{Fore.YELLOW}Best for:{Style.RESET_ALL} {model_info.get('trading_focus', 'General analysis')}")
-        print(f"{Fore.YELLOW}Tip:{Style.RESET_ALL} {'Enable GPU acceleration for faster inference' if model_info['size_gb'] > 1.5 else 'This model runs well on CPU-only systems'}")
-
-        print("=" * width)
-
-        # Strengths and weaknesses
-        print("\n" + "-" * width)
-        print(f"{Fore.CYAN}STRENGTHS & WEAKNESSES{Style.RESET_ALL}".center(width))
-        print("-" * width)
-        print(f"{Fore.GREEN}Strengths:{Style.RESET_ALL} {model_info.get('strengths', 'Not specified')}")
-        print(f"{Fore.RED}Weaknesses:{Style.RESET_ALL} {model_info.get('weaknesses', 'Not specified')}")
-
-        print("=" * width)
+    # LLM functionality removed
 
     def show_spinner_animation(self, message, callback_func, *args, **kwargs):
         """Show a spinner animation while executing a callback function.
@@ -930,7 +843,7 @@ class TerminalUI:
 
         # Clear the screen and print header
         self.clear_screen()
-        self.print_header("3lacks Scanner - LLM Download")
+        self.print_header("Blacks Scanner - Download")
 
         # Print initial message
         print(f"\n{Fore.CYAN}{message}{Style.RESET_ALL}\n")
@@ -999,226 +912,15 @@ class TerminalUI:
             # Return the result
             return result
 
-    def check_llm_dependencies(self):
-        """Check if all required LLM dependencies are installed and offer to install them if missing.
+    # LLM functionality removed
 
-        Returns:
-            bool: True if all dependencies are installed or successfully installed, False otherwise
-        """
-        try:
-            from src.analysis.local_llm import check_dependencies, install_dependencies
+    # TA-Lib installation function removed
 
-            all_installed, missing_packages = check_dependencies()
-            if all_installed:
-                return True
-
-            # Show missing dependencies
-            self.print_header("Missing Dependencies")
-            self.print_warning(f"The following required packages are missing: {', '.join(missing_packages)}")
-            self.print_info("These packages are required for LLM functionality.")
-
-            # Ask to install
-            install = self.get_input("\nWould you like to install these packages now? (y/n): ")
-            if install.lower() != 'y':
-                self.print_info("Dependencies not installed. LLM functionality will be limited.")
-                return False
-
-            # Show installation progress
-            self.print_info("Installing dependencies...")
-
-            # Show loading animation for installation
-            install_logs = [
-                "Checking package versions...",
-                "Resolving dependencies...",
-                "Downloading packages...",
-                "Installing packages...",
-                "Building wheels...",
-                "Verifying installations...",
-                "Cleaning up...",
-                "Finalizing installation..."
-            ]
-            self.show_loading_animation("Installing required packages", duration=3, log_messages=install_logs)
-
-            # Actually install the dependencies
-            success = install_dependencies(missing_packages)
-
-            if success:
-                self.print_success("Successfully installed all required dependencies!")
-                return True
-            else:
-                self.print_error("Failed to install dependencies. Please install them manually:")
-                self.print_info(f"pip install {' '.join(missing_packages)}")
-                return False
-
-        except Exception as e:
-            self.print_error(f"Error checking dependencies: {str(e)}")
-            return False
-
-    def remove_all_llm_models(self):
-        """Remove all LLM models from the cache directory."""
-        self.print_header("Remove All LLM Models")
-
-        try:
-            # Import required modules
-            self._import_from_pybloat()
-            from src.analysis.local_llm import POSSIBLE_MODEL_PATHS
-            import os
-            import glob
-            import shutil
-
-            # Check all possible model paths
-            all_model_files = []
-            for model_path in POSSIBLE_MODEL_PATHS:
-                if os.path.exists(model_path):
-                    # Get a list of all model files in this path
-                    path_files = glob.glob(os.path.join(model_path, "*.gguf"))
-                    path_files += glob.glob(os.path.join(model_path, "*.ggml"))
-                    path_files += glob.glob(os.path.join(model_path, "*.bin"))
-
-                    if path_files:
-                        self.print_info(f"Found models in: {model_path}")
-                        all_model_files.extend(path_files)
-
-            if not all_model_files:
-                self.print_info("No model files found in any location.")
-                self.wait_for_key()
-                return
-
-            # Display the list of models to be removed
-            self.print_info(f"Found {len(all_model_files)} model files:")
-            for i, model_file in enumerate(all_model_files, 1):
-                file_size_gb = os.path.getsize(model_file) / (1024 * 1024 * 1024)
-                file_name = os.path.basename(model_file)
-                file_path = os.path.dirname(model_file)
-                self.print_info(f"{i}. {file_name} ({file_size_gb:.2f} GB) in {file_path}")
-
-            # Ask for confirmation
-            confirm = self.get_input("\nAre you sure you want to remove ALL LLM models? This cannot be undone. (y/n): ")
-            if confirm.lower() != 'y':
-                self.print_info("Operation cancelled.")
-                self.wait_for_key()
-                return
-
-            # Show a second confirmation for safety
-            confirm2 = self.get_input("\nFinal confirmation - remove ALL models? (type 'CONFIRM' to proceed): ")
-            if confirm2 != 'CONFIRM':
-                self.print_info("Operation cancelled.")
-                self.wait_for_key()
-                return
-
-            # Remove all model files
-            removed_count = 0
-            failed_count = 0
-
-            # Show loading animation while removing files
-            delete_logs = [
-                f"Preparing to remove {len(all_model_files)} model files...",
-                "Checking file permissions...",
-                "Removing model files...",
-                "Cleaning up cache...",
-                "Verifying deletion..."
-            ]
-            self.show_loading_animation("Removing LLM models", duration=2, log_messages=delete_logs)
-
-            for model_file in all_model_files:
-                try:
-                    os.remove(model_file)
-                    removed_count += 1
-                except Exception as e:
-                    self.print_error(f"Failed to remove {os.path.basename(model_file)}: {e}")
-                    failed_count += 1
-
-            # Reset the LLM analyzer
-            self.llm_analyzer = None
-
-            # Display results
-            if removed_count > 0:
-                self.print_success(f"Successfully removed {removed_count} model files.")
-            if failed_count > 0:
-                self.print_warning(f"Failed to remove {failed_count} model files.")
-
-            self.wait_for_key()
-
-        except Exception as e:
-            self.print_error(f"Error removing LLM models: {e}")
-            self.wait_for_key()
+    # LLM functionality removed
 
 
 
-    def change_llm_model(self):
-        """Change the LLM model setting."""
-        self.print_header("Change LLM Model")
-
-        # Import available models from local_llm module
-        try:
-            from src.analysis.local_llm import AVAILABLE_MODELS
-
-            # Available LLM models
-            available_models = list(AVAILABLE_MODELS.keys())
-
-            # Display all available open-source models
-            print(f"{Fore.CYAN}Available Open-Source LLM Models:{Style.RESET_ALL}")
-            for i, model_key in enumerate(available_models, 1):
-                model_info = AVAILABLE_MODELS[model_key]
-                focus = model_info.get('trading_focus', '')
-                license_info = model_info.get('license', 'Unknown License')
-                license_color = Fore.GREEN if 'MIT' in license_info or 'Apache' in license_info else Fore.YELLOW
-                print(f"{i}. {Fore.WHITE}{model_key}{Style.RESET_ALL} - {model_info['description']} ({model_info['size_gb']:.2f} GB)")
-                print(f"   {Fore.BLUE}Focus:{Style.RESET_ALL} {focus} | {license_color}License: {license_info}{Style.RESET_ALL}")
-
-            # Use all models for selection
-            all_models = available_models
-
-            print(f"\nCurrent LLM model: {Fore.YELLOW}{self.settings['llm_model']}{Style.RESET_ALL}")
-            print(f"\n{Fore.CYAN}Options:{Style.RESET_ALL}")
-            print(f"- Enter a model number to view details and select a model")
-            print(f"- Enter '{Fore.GREEN}b{Style.RESET_ALL}' to go back")
-
-            choice = self.get_input("\nEnter your choice: ")
-
-            if choice.lower() == 'b':
-                return
-
-            try:
-                index = int(choice) - 1
-                if 0 <= index < len(all_models):
-                    selected_model = all_models[index]
-                    model_info = AVAILABLE_MODELS[selected_model]
-
-                    # Display detailed information about the selected model
-                    self.display_model_details(selected_model, model_info)
-
-                    # Ask for confirmation
-                    confirm = self.get_input(f"\nDo you want to use the {Fore.YELLOW}{selected_model}{Style.RESET_ALL} model? (y/n): ")
-
-                    if confirm.lower() == 'y':
-                        self.settings['llm_model'] = selected_model
-                        self.print_success(f"LLM model changed to {self.settings['llm_model']}.")
-
-                        # Show download information
-                        self.print_info(f"Note: You need to manually download this model ({model_info['size_gb']:.2f} GB) and place it in the models folder.")
-                        self.print_info(f"Model filename: {model_info.get('name')}")
-                        self.print_info(f"Download URL: {model_info.get('url')}")
-
-                        # Show hardware requirements
-                        hardware_req = model_info.get('hardware_req', 'Not specified')
-                        self.print_info(f"Hardware Requirements: {hardware_req}")
-
-                        # Recommend GPU if appropriate
-                        if not self.settings['use_gpu'] and 'GPU' in hardware_req:
-                            self.print_warning("This model would benefit from GPU acceleration. Consider enabling it in settings.")
-                    else:
-                        self.print_info("Model selection cancelled.")
-                else:
-                    self.print_error("Invalid choice. Please try again.")
-            except ValueError:
-                self.print_error("Invalid input. Please enter a number.")
-        except ImportError:
-            self.print_error("Could not import available models. Please check your installation.")
-        except Exception as e:
-            self.print_error(f"Error: {str(e)}")
-
-        time.sleep(2)
+    # LLM functionality removed
 
     def build_command_args(self):
         """Build command line arguments from settings."""
@@ -1228,11 +930,7 @@ class TerminalUI:
         for key, value in self.settings.items():
             setattr(args, key, value)
 
-        # Ensure LLM arguments are properly set
-        if hasattr(args, 'use_llm') and args.use_llm:
-            args.use_llm = True
-            args.llm_model = self.settings['llm_model']
-            args.use_gpu = self.settings['use_gpu']
+        # LLM functionality removed
 
         # Add terminal chart option (default to False)
         args.terminal_chart = False
@@ -1286,7 +984,7 @@ class TerminalUI:
         try:
             # Import main from PyBloat directory
             self._import_from_pybloat()
-            from main import fetch_data, analyze_data
+            from main import fetch_data
 
             args = self.build_command_args()
 
@@ -1333,8 +1031,30 @@ class TerminalUI:
                 ]
                 self.show_loading_animation("Calculating technical indicators", duration=3, log_messages=analysis_logs, compact_completion=True)
 
-                # Analyze the data
-                df_analyzed = analyze_data(df, args)
+                # Check if we have cached analysis results
+                cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
+
+                if cached_analysis is not None:
+                    # Use cached analysis
+                    df_analyzed = cached_analysis
+                    self.print_info(f"Using cached analysis for {args.symbol} on {args.exchange} ({args.timeframe})")
+
+                    # Add a log entry about using cached data
+                    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                    self.collected_logs.append((timestamp, f"✓ Using cached analysis data"))
+                else:
+                    # Analyze the data using the technical analyzer directly
+                    from src.analysis.technical_analysis import TechnicalAnalyzer
+                    analyzer = TechnicalAnalyzer()
+                    df_analyzed = analyzer.analyze(df)
+
+                    # Cache the analysis results for future use
+                    if df_analyzed is not None and not df_analyzed.empty:
+                        save_analysis_to_cache(df_analyzed, args.symbol, args.exchange, args.timeframe)
+
+                        # Add a log entry about caching the data
+                        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                        self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
 
                 # Add more detailed logs about the analysis results
                 if df_analyzed is not None and not df_analyzed.empty:
@@ -1379,8 +1099,7 @@ class TerminalUI:
 
                 if df_analyzed is not None and not df_analyzed.empty:
                     self.print_success(f"Successfully analyzed data with {len(df_analyzed.columns)} indicators.")
-                    # Mark analyze_data as completed
-                    self.completed_functions['analyze_data'] = True
+                    # Analysis completed
 
                     # Show key indicators and metrics in a combined format
                     latest = df_analyzed.iloc[-1]
@@ -1418,7 +1137,8 @@ class TerminalUI:
                     # Show Bollinger Bands if available
                     if 'BBL_20_2.0' in df_analyzed.columns and 'BBM_20_2.0' in df_analyzed.columns and 'BBU_20_2.0' in df_analyzed.columns:
                         lower = latest['BBL_20_2.0']
-                        middle = latest['BBM_20_2.0']
+                        # middle band is used for reference but not directly displayed
+                        # middle = latest['BBM_20_2.0']
                         upper = latest['BBU_20_2.0']
                         price = latest['close']
                         bb_position = (price - lower) / (upper - lower) * 100 if (upper - lower) > 0 else 50
@@ -1485,7 +1205,7 @@ class TerminalUI:
         try:
             # Import main from PyBloat directory
             self._import_from_pybloat()
-            from main import fetch_data, analyze_data, train_model
+            from main import fetch_data, train_model
 
             args = self.build_command_args()
 
@@ -1525,7 +1245,30 @@ class TerminalUI:
                 ]
                 self.show_loading_animation("Analyzing market data", duration=2.5, log_messages=analysis_logs, compact_completion=True)
 
-                df_analyzed = analyze_data(df, args)
+                # Check if we have cached analysis results
+                cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
+
+                if cached_analysis is not None:
+                    # Use cached analysis
+                    df_analyzed = cached_analysis
+                    self.print_info(f"Using cached analysis for {args.symbol} on {args.exchange} ({args.timeframe})")
+
+                    # Add a log entry about using cached data
+                    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                    self.collected_logs.append((timestamp, f"✓ Using cached analysis data"))
+                else:
+                    # Analyze the data using the technical analyzer directly
+                    from src.analysis.technical_analysis import TechnicalAnalyzer
+                    analyzer = TechnicalAnalyzer()
+                    df_analyzed = analyzer.analyze(df)
+
+                    # Cache the analysis results for future use
+                    if df_analyzed is not None and not df_analyzed.empty:
+                        save_analysis_to_cache(df_analyzed, args.symbol, args.exchange, args.timeframe)
+
+                        # Add a log entry about caching the data
+                        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                        self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
 
                 if df_analyzed is not None and not df_analyzed.empty:
                     # Train model with enhanced loading animation
@@ -1561,7 +1304,20 @@ class TerminalUI:
                         print(f"Features: {Fore.YELLOW}{feature_count}{Style.RESET_ALL}")
 
                         if model_path:
-                            print(f"Model: {Fore.GREEN}{os.path.basename(model_path)}{Style.RESET_ALL}")
+                            # Get a shorter version of the model path filename
+                            model_filename = os.path.basename(model_path)
+                            if model_filename and len(model_filename) > 25:
+                                # Extract the symbol and model type from the filename
+                                parts = model_filename.split('_')
+                                if len(parts) >= 3:
+                                    # Format: symbol_modeltype_timestamp.joblib
+                                    symbol = parts[0]
+                                    model_type = parts[1]
+                                    # Get just the date part of the timestamp (first 8 chars)
+                                    date_part = parts[2][:8] if len(parts[2]) > 8 else parts[2]
+                                    model_filename = f"{symbol}_{model_type}_{date_part}.joblib"
+
+                            print(f"Model: {Fore.CYAN}{model_filename}{Style.RESET_ALL}")
                             self.settings['model_path'] = model_path
                             self.refresh_available_models()
                     else:
@@ -1588,7 +1344,7 @@ class TerminalUI:
         try:
             # Import main from PyBloat directory
             self._import_from_pybloat()
-            from main import fetch_data, analyze_data, predict
+            from main import fetch_data, predict
 
             # Clear any previous logs
             self.collected_logs = []
@@ -1627,7 +1383,30 @@ class TerminalUI:
                 # Show loading animation while analyzing data
                 self.show_loading_animation("Calculating technical indicators", duration=2.5, compact_completion=True)
 
-                df_analyzed = analyze_data(df, args)
+                # Check if we have cached analysis results
+                cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
+
+                if cached_analysis is not None:
+                    # Use cached analysis
+                    df_analyzed = cached_analysis
+                    self.print_info(f"Using cached analysis for {args.symbol} on {args.exchange} ({args.timeframe})")
+
+                    # Add a log entry about using cached data
+                    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                    self.collected_logs.append((timestamp, f"✓ Using cached analysis data"))
+                else:
+                    # Analyze the data using the technical analyzer directly
+                    from src.analysis.technical_analysis import TechnicalAnalyzer
+                    analyzer = TechnicalAnalyzer()
+                    df_analyzed = analyzer.analyze(df)
+
+                    # Cache the analysis results for future use
+                    if df_analyzed is not None and not df_analyzed.empty:
+                        save_analysis_to_cache(df_analyzed, args.symbol, args.exchange, args.timeframe)
+
+                        # Add a log entry about caching the data
+                        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                        self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
 
                 if df_analyzed is not None and not df_analyzed.empty:
                     self.print_info("Making predictions...")
@@ -1654,66 +1433,11 @@ class TerminalUI:
                         # Mark make_predictions as completed
                         self.completed_functions['make_predictions'] = True
 
-                        # Display prediction summary with improved formatting
-                        print(f"\n{Fore.YELLOW}PREDICTION SUMMARY{Style.RESET_ALL}")
-                        print(f"{Fore.YELLOW}------------------{Style.RESET_ALL}")
-
-                        if 'prediction' in df_predictions.columns:
-                            # Count predictions
-                            pred_counts = df_predictions['prediction'].value_counts()
-                            total_preds = len(df_predictions)
-
-                            # Calculate percentages
-                            bullish_count = pred_counts.get(1, 0)
-                            bearish_count = pred_counts.get(0, 0)
-                            bullish_pct = (bullish_count / total_preds) * 100 if total_preds > 0 else 0
-                            bearish_pct = (bearish_count / total_preds) * 100 if total_preds > 0 else 0
-
-                            # Latest prediction
-                            latest_pred = df_predictions['prediction'].iloc[-1]
-                            latest_prob = df_predictions['prediction_probability'].iloc[-1] if 'prediction_probability' in df_predictions.columns else None
-
-                            pred_text = "Bullish" if latest_pred == 1 else "Bearish"
-                            pred_color = Fore.GREEN if latest_pred == 1 else Fore.RED
-                            prob_text = f" (Confidence: {latest_prob:.2f})" if latest_prob is not None else ""
-
-                            # Create a two-column layout for prediction summary
-                            left_column = []
-                            right_column = []
-
-                            # Add prediction info to left column
-                            left_column.append(f"Prediction: {pred_color}{pred_text}{Style.RESET_ALL}{prob_text}")
-                            left_column.append(f"Bullish signals: {Fore.GREEN}{bullish_count} ({bullish_pct:.1f}%){Style.RESET_ALL}")
-                            left_column.append(f"Bearish signals: {Fore.RED}{bearish_count} ({bearish_pct:.1f}%){Style.RESET_ALL}")
-
-                            # Add price info to right column
-                            latest = df_predictions.iloc[-1]
-                            right_column.append(f"Current price: {Fore.CYAN}{latest['close']:.5f}{Style.RESET_ALL}")
-
-                            # Add entry/exit points with TP/SL levels if available
-                            if all(col in df_predictions.columns for col in ['entry_price', 'stop_loss', 'take_profit', 'risk_reward']):
-                                right_column.append(f"Entry Price: {Fore.CYAN}{latest['entry_price']:.5f}{Style.RESET_ALL}")
-                                right_column.append(f"Stop Loss: {Fore.RED}{latest['stop_loss']:.5f}{Style.RESET_ALL}")
-                                right_column.append(f"Take Profit: {Fore.GREEN}{latest['take_profit']:.5f}{Style.RESET_ALL}")
-                                right_column.append(f"Risk/Reward: {Fore.YELLOW}1:{latest['risk_reward']:.2f}{Style.RESET_ALL}")
-
-                            # Ensure both columns have the same number of items
-                            max_items = max(len(left_column), len(right_column))
-                            left_column.extend([''] * (max_items - len(left_column)))
-                            right_column.extend([''] * (max_items - len(right_column)))
-
-                            # Combine columns with proper spacing
-                            for i in range(max_items):
-                                left_item = left_column[i]
-                                right_item = right_column[i]
-                                # Remove ANSI color codes for length calculation
-                                left_item_clean = left_item.replace(Fore.RED, '').replace(Fore.GREEN, '').replace(Fore.WHITE, '').replace(Fore.YELLOW, '').replace(Fore.CYAN, '').replace(Style.RESET_ALL, '')
-                                print(f"{left_item}{' ' * (40 - len(left_item_clean))}{right_item}")
-                        else:
-                            print("No prediction column found in results.")
+                        # Skip the immediate prediction summary display
+                        # We'll let the display_in_current_terminal method handle the full display
 
                         # Display predictions in current terminal
-                        self.print_info("\nDisplaying detailed predictions...")
+                        self.print_info("\nPreparing prediction results...")
 
                         # Show loading animation while preparing output
                         self.show_loading_animation("Preparing prediction report", duration=1.5)
@@ -1752,7 +1476,7 @@ class TerminalUI:
         try:
             # Import main from PyBloat directory
             self._import_from_pybloat()
-            from main import fetch_data, analyze_data, predict, backtest
+            from main import fetch_data, predict, backtest
 
             # Clear any previous logs
             self.collected_logs = []
@@ -1778,7 +1502,30 @@ class TerminalUI:
                 # Show loading animation while analyzing data
                 self.show_loading_animation("Calculating technical indicators", duration=2.5, compact_completion=True)
 
-                df_analyzed = analyze_data(df, args)
+                # Check if we have cached analysis results
+                cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
+
+                if cached_analysis is not None:
+                    # Use cached analysis
+                    df_analyzed = cached_analysis
+                    self.print_info(f"Using cached analysis for {args.symbol} on {args.exchange} ({args.timeframe})")
+
+                    # Add a log entry about using cached data
+                    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                    self.collected_logs.append((timestamp, f"✓ Using cached analysis data"))
+                else:
+                    # Analyze the data using the technical analyzer directly
+                    from src.analysis.technical_analysis import TechnicalAnalyzer
+                    analyzer = TechnicalAnalyzer()
+                    df_analyzed = analyzer.analyze(df)
+
+                    # Cache the analysis results for future use
+                    if df_analyzed is not None and not df_analyzed.empty:
+                        save_analysis_to_cache(df_analyzed, args.symbol, args.exchange, args.timeframe)
+
+                        # Add a log entry about caching the data
+                        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                        self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
 
                 if df_analyzed is not None and not df_analyzed.empty:
                     self.print_info("Making predictions...")
@@ -1857,285 +1604,25 @@ class TerminalUI:
 
         self.wait_for_key()
 
-    def llm_analysis(self):
-        """Perform LLM analysis on market data."""
-        self.print_header("LLM Analysis")
+    # LLM functionality removed
 
-        # First check dependencies
-        if not self.check_llm_dependencies():
-            self.print_warning("Cannot perform LLM analysis without required dependencies.")
-            self.print_info("Please install the required dependencies and try again.")
-            self.wait_for_key()
-            return
+    def run_all_steps(self):  # Function name kept for compatibility
+        """Run analysis based on current settings and display results at the end."""
+        self.print_header("Running Analysis")
 
         try:
             # Import main from PyBloat directory
             self._import_from_pybloat()
-            from main import fetch_data, analyze_data
-            from src.analysis.local_llm import LocalLLMAnalyzer, AVAILABLE_MODELS, DEFAULT_MODEL_PATH
-            import os
-
-            # Clear any previous logs
-            self.collected_logs = []
-
-            # Record operation start time
-            operation_start_time = datetime.now()
-
-            args = self.build_command_args()
-
-            # Check if LLM analysis is enabled
-            if not self.settings['use_llm']:
-                self.print_warning("LLM Analysis is currently disabled. Enable it in Settings > Toggle LLM Analysis.")
-                self.wait_for_key()
-                return
-
-            # Fetch data
-            self.print_info(f"Fetching data for {args.symbol} from {args.exchange}...")
-            df = fetch_data(args)
-
-            if df is None:
-                self.print_error("Failed to fetch data.")
-                self.wait_for_key()
-                return
-
-            # Display which exchange was actually used (for CCXT:ALL mode)
-            if 'exchange' in df.attrs and df.attrs['exchange'] != self.settings['exchange']:
-                self.print_info(f"Data fetched from {df.attrs['exchange']} exchange")
-
-            # Analyze data
-            self.print_info("Performing technical analysis...")
-            df_analyzed = analyze_data(df, args)
-
-            if df_analyzed is None or df_analyzed.empty:
-                self.print_error("Analysis resulted in empty DataFrame or failed.")
-                self.wait_for_key()
-                return
-
-            # Set DataFrame attributes for better context
-            df_analyzed.attrs["symbol"] = args.symbol
-            df_analyzed.attrs["timeframe"] = args.timeframe
-
-            # Get model info
-            model_info = AVAILABLE_MODELS.get(self.settings['llm_model'], {})
-            model_name = model_info.get('name', self.settings['llm_model'])
-
-            # Check if model exists, offer to download if not
-            model_file_path = os.path.join(DEFAULT_MODEL_PATH, model_name)
-
-            # Check if model already exists and has a reasonable size (at least 1MB)
-            if os.path.exists(model_file_path) and os.path.getsize(model_file_path) > 1000000:
-                file_size_gb = os.path.getsize(model_file_path) / (1024 * 1024 * 1024)
-                self.print_info(f"Model already exists at {model_file_path}")
-                self.print_info(f"Model file size: {file_size_gb:.2f} GB")
-            # If file doesn't exist or is too small (likely a failed download)
-            else:
-                if os.path.exists(model_file_path) and os.path.getsize(model_file_path) <= 1000000:
-                    self.print_warning(f"Model file exists but appears to be corrupted or incomplete: {model_name}")
-                    self.print_warning(f"File size: {os.path.getsize(model_file_path) / (1024*1024):.2f} MB")
-                    # Remove the incomplete file
-                    try:
-                        os.remove(model_file_path)
-                        self.print_info("Removed incomplete file.")
-                    except Exception as e:
-                        self.print_error(f"Failed to remove incomplete file: {str(e)}")
-                else:
-                    self.print_warning(f"Model file not found: {model_name}")
-
-                # Show model info
-                self.print_info(f"Model: {self.settings['llm_model']} ({model_info.get('size_gb', 'unknown')} GB)")
-                self.print_info(f"Description: {model_info.get('description', 'No description available')}")
-
-                # Inform user they need to download the model manually
-                self.print_info("You need to download the model manually to use LLM analysis.")
-                self.print_info(f"Model filename: {model_name}")
-                self.print_info(f"Download URL: {model_info.get('url')}")
-                self.print_info(f"Save to one of these locations:")
-                from src.analysis.local_llm import POSSIBLE_MODEL_PATHS
-                for path in POSSIBLE_MODEL_PATHS:
-                    self.print_info(f"- {path}")
-                self.print_info("\nCannot proceed with LLM analysis without the model.")
-                self.wait_for_key()
-                return
-
-            # Use the preloaded LLM analyzer if available, or initialize a new one if needed
-            if self.llm_analyzer is None or self.llm_analyzer.llm is None:
-                self.print_info(f"Initializing local LLM analyzer with model {self.settings['llm_model']}...")
-                self.print_info(f"This may take a moment to load the model ({model_info.get('size_gb', 'unknown')} GB)")
-
-                # Show enhanced loading animation for model initialization
-                model_logs = [
-                    "Checking model availability...",
-                    "Downloading model files...",
-                    "Verifying model integrity...",
-                    "Loading model weights...",
-                    "Initializing neural network...",
-                    "Setting up inference engine...",
-                    "Optimizing memory usage...",
-                    "Configuring model parameters...",
-                    "Preparing model context...",
-                    "Model ready for inference..."
-                ]
-                self.show_loading_animation("Loading AI model", duration=3, log_messages=model_logs, compact_completion=True)
-
-                # Configure GPU usage
-                n_gpu_layers = 0
-                if self.settings['use_gpu']:
-                    self.print_info("GPU acceleration enabled. Using GPU for inference.")
-                    n_gpu_layers = -1  # Use all layers on GPU
-
-                # Initialize the analyzer
-                self.llm_analyzer = LocalLLMAnalyzer(
-                    model_name=model_name,
-                    n_gpu_layers=n_gpu_layers
-                )
-            else:
-                self.print_info(f"Using preloaded LLM model: {self.settings['llm_model']}")
-
-            # Use the analyzer (preloaded or newly initialized)
-            llm_analyzer = self.llm_analyzer
-
-            # Check if LLM was initialized successfully
-            if llm_analyzer.llm is None:
-                self.print_warning("WARNING - Failed to initialize LLM model.")
-                self.print_warning(f"Model file not found or corrupted: {model_file_path}")
-                self.print_info("Using fallback technical indicator-based recommendation system instead.")
-                self.print_info("\nTo use the full LLM capabilities, you can:")
-                self.print_info("1. Try downloading the model again using the dedicated script:")
-                self.print_info(f"   python download_llm_model.py download {self.settings['llm_model']} --force")
-                self.print_info("2. Check if your system meets the requirements for running LLMs:")
-                self.print_info("   - At least 16GB of RAM")
-                self.print_info("   - For GPU acceleration: NVIDIA GPU with at least 8GB VRAM")
-                self.print_info("3. Try a smaller model if your system has limited resources")
-
-            # Perform LLM analysis
-            self.print_info("Analyzing market data with local LLM...")
-
-            # Show enhanced loading animation for LLM processing
-            analysis_logs = [
-                "Preparing market data for analysis...",
-                "Formatting prompt for LLM...",
-                "Sending data to neural network...",
-                "Processing market patterns...",
-                "Analyzing price action...",
-                "Evaluating technical indicators...",
-                "Generating trading insights...",
-                "Calculating risk assessment...",
-                "Formulating trading recommendation...",
-                "Finalizing AI analysis..."
-            ]
-            self.show_loading_animation("AI analyzing market data", duration=3, log_messages=analysis_logs, compact_completion=True)
-            recommendation = llm_analyzer.analyze(df_analyzed)
-
-            # Check if we got a recommendation
-            if recommendation is None:
-                self.print_error(f"LLM analysis failed: No recommendation returned")
-                self.wait_for_key()
-                return
-
-            # Check if it's an error (but not a fallback recommendation)
-            if "error" in recommendation and recommendation.get("model") != "FALLBACK_TECHNICAL_INDICATORS" and recommendation.get("model") != "FALLBACK_ERROR":
-                self.print_error(f"LLM analysis failed: {recommendation['error']}")
-                self.wait_for_key()
-                return
-
-            # Check if it's a fallback recommendation
-            if recommendation.get("model") == "FALLBACK_TECHNICAL_INDICATORS":
-                self.print_info("Using fallback technical indicator-based recommendation system.")
-
-            # Save analysis if requested
-            if self.settings['save']:
-                filename = llm_analyzer.save_analysis(recommendation, args.symbol, args.timeframe)
-                if filename:
-                    self.print_success(f"Saved LLM analysis to {filename}")
-
-            # Display the collected logs for this operation only
-            self.display_collected_logs(f"LLM Analysis Process Log - {args.symbol}", operation_start_time)
-
-            # Mark llm_analysis as completed
-            self.completed_functions['llm_analysis'] = True
-
-            # Display results
-            self.print_header(f"LLM Analysis Results - {args.symbol} ({args.timeframe})")
-
-            # Print recommendation summary
-            if 'recommendation' in recommendation:
-                # Original LLM format
-                self.print_info(f"\nTrading Recommendation: {Fore.YELLOW}{recommendation['recommendation']}{Style.RESET_ALL}")
-                self.print_info(f"Risk Assessment: {Fore.YELLOW}{recommendation.get('risk', 'UNKNOWN')}{Style.RESET_ALL}")
-                self.print_info(f"Model Used: {Fore.CYAN}{recommendation.get('model', model_name)}{Style.RESET_ALL}")
-                self.print_info(f"Analysis Timestamp: {recommendation.get('timestamp', datetime.now().isoformat())}")
-            else:
-                # Fallback format
-                self.print_info(f"\nTrading Signal: {Fore.YELLOW}{recommendation.get('signal', 'neutral').upper()}{Style.RESET_ALL}")
-                self.print_info(f"Market Summary: {Fore.YELLOW}{recommendation.get('market_summary', 'Unknown')}{Style.RESET_ALL}")
-                self.print_info(f"Confidence: {Fore.YELLOW}{recommendation.get('confidence', 'low')}{Style.RESET_ALL}")
-                self.print_info(f"Generated By: {Fore.CYAN}{recommendation.get('generated_by', 'fallback_system')}{Style.RESET_ALL}")
-
-            # Print entry/exit levels if available
-            print("\n" + "=" * 40)
-            print(f"{Fore.CYAN}ENTRY/EXIT LEVELS{Style.RESET_ALL}")
-            print("=" * 40)
-
-            # Entry price
-            entry_price = recommendation.get('entry_price')
-            if entry_price is not None:
-                print(f"{Fore.GREEN}Entry Price:{Style.RESET_ALL} {entry_price:.2f}")
-            else:
-                print(f"{Fore.GREEN}Entry Price:{Style.RESET_ALL} Not specified")
-
-            # Stop loss
-            stop_loss = recommendation.get('stop_loss')
-            if stop_loss is not None:
-                print(f"{Fore.RED}Stop Loss:{Style.RESET_ALL} {stop_loss:.2f}")
-            else:
-                print(f"{Fore.RED}Stop Loss:{Style.RESET_ALL} Not specified")
-
-            # Take profit
-            take_profit = recommendation.get('take_profit')
-            if take_profit is not None:
-                print(f"{Fore.GREEN}Take Profit:{Style.RESET_ALL} {take_profit:.2f}")
-            else:
-                print(f"{Fore.GREEN}Take Profit:{Style.RESET_ALL} Not specified")
-
-            # Risk/reward ratio
-            risk_reward = recommendation.get('risk_reward')
-            if risk_reward is not None:
-                print(f"{Fore.YELLOW}Risk/Reward Ratio:{Style.RESET_ALL} {risk_reward}")
-            else:
-                print(f"{Fore.YELLOW}Risk/Reward Ratio:{Style.RESET_ALL} Not specified")
-
-            print()
-
-            # Print full analysis if available
-            if 'analysis' in recommendation:
-                print(recommendation['analysis'])
-            elif 'reasoning' in recommendation:
-                print(f"\n{Fore.CYAN}Analysis:{Style.RESET_ALL}")
-                print(recommendation['reasoning'])
-
-            self.wait_for_key()
-
-        except Exception as e:
-            self.print_error(f"Error performing LLM analysis: {e}")
-            import traceback
-            self.print_error(traceback.format_exc())
-            self.wait_for_key()
-
-    def run_all_steps(self):
-        """Run all steps based on current settings."""
-        self.print_header("Running All Steps")
-
-        try:
-            # Import main from PyBloat directory
-            self._import_from_pybloat()
-            from main import fetch_data, analyze_data, train_model, predict, backtest
+            from main import fetch_data, train_model, predict, backtest
 
             args = self.build_command_args()
 
             # Clear any previous logs
             self.collected_logs = []
 
-            # Record operation start time
+            # Create a dictionary to store all results for display at the end
+            all_results = {}
+            all_results['start_time'] = datetime.now()
 
             # Fetch data
             self.print_info(f"Fetching data for {args.symbol} from {args.exchange}...")
@@ -2149,12 +1636,15 @@ class TerminalUI:
                 self.wait_for_key()
                 return
 
-            # Display which exchange was actually used (for CCXT:ALL mode)
-            if 'exchange' in df.attrs and df.attrs['exchange'] != self.settings['exchange']:
-                self.print_info(f"Data fetched from {df.attrs['exchange']} exchange")
+            # Mark fetch_data as completed
+            self.completed_functions['fetch_data'] = True
 
-            self.print_success(f"Successfully fetched {len(df)} rows of data.")
-            self.print_info(f"Time range: {df.index.min()} to {df.index.max()}")
+            # Store data information for later display
+            all_results['data'] = {
+                'rows': len(df),
+                'time_range': (df.index.min(), df.index.max()),
+                'exchange': df.attrs.get('exchange', self.settings['exchange'])
+            }
 
             # Analyze data
             self.print_info("Performing technical analysis...")
@@ -2163,24 +1653,46 @@ class TerminalUI:
             analysis_logs = [
                 "Initializing technical analysis engine...",
                 "Standardizing price data columns...",
-                "Computing trend indicators (SMA, EMA, TEMA)...",
-                "Calculating momentum oscillators (RSI, Stochastic)...",
-                "Generating MACD signal lines and histogram...",
-                "Computing Bollinger Bands and %B indicator...",
-                "Calculating Average True Range for volatility...",
-                "Identifying support and resistance levels...",
-                "Detecting price patterns and chart formations...",
-                "Computing On-Balance Volume and Money Flow...",
-                "Calculating Ichimoku Cloud components...",
-                "Generating Fibonacci retracement levels...",
-                "Identifying divergence patterns in oscillators...",
-                "Calculating pivot points and price channels...",
-                "Generating final trading signals and indicators..."
+                "Computing trend indicators...",
+                "Calculating momentum oscillators...",
+                "Generating MACD signals...",
+                "Computing Bollinger Bands...",
+                "Calculating volatility metrics...",
+                "Identifying support/resistance levels...",
+                "Detecting price patterns...",
+                "Computing volume indicators...",
+                "Calculating Ichimoku Cloud...",
+                "Generating Fibonacci levels...",
+                "Identifying divergence patterns...",
+                "Calculating pivot points...",
+                "Generating trading signals..."
             ]
             self.show_loading_animation("Calculating technical indicators", duration=3, log_messages=analysis_logs, compact_completion=True)
 
-            # Analyze the data
-            df_analyzed = analyze_data(df, args)
+            # Check if we have cached analysis results
+            cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
+
+            if cached_analysis is not None:
+                # Use cached analysis
+                df_analyzed = cached_analysis
+                self.print_info(f"Using cached analysis for {args.symbol} on {args.exchange} ({args.timeframe})")
+
+                # Add a log entry about using cached data
+                timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                self.collected_logs.append((timestamp, f"✓ Using cached analysis data"))
+            else:
+                # Analyze the data using the technical analyzer directly
+                from src.analysis.technical_analysis import TechnicalAnalyzer
+                analyzer = TechnicalAnalyzer()
+                df_analyzed = analyzer.analyze(df)
+
+                # Cache the analysis results for future use
+                if df_analyzed is not None and not df_analyzed.empty:
+                    save_analysis_to_cache(df_analyzed, args.symbol, args.exchange, args.timeframe)
+
+                    # Add a log entry about caching the data
+                    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                    self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
 
             # Add more detailed logs about the analysis results
             if df_analyzed is not None and not df_analyzed.empty:
@@ -2193,17 +1705,17 @@ class TerminalUI:
                     "Oscillators": [col for col in df_analyzed.columns if any(x in col.lower() for x in ['macd', 'ppo', 'tsi'])]
                 }
 
-                # Log the number of indicators in each group
-                for group, indicators in indicator_groups.items():
-                    if indicators:
-                        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
-                        self.collected_logs.append((timestamp, f"Calculated {len(indicators)} {group.lower()} indicators"))
+                # Store indicator information for later display
+                all_results['indicators'] = {
+                    'count': len(df_analyzed.columns),
+                    'groups': {group: len(indicators) for group, indicators in indicator_groups.items() if indicators}
+                }
+
+                # Analysis step is integrated into the process
             if df_analyzed is None or df_analyzed.empty:
                 self.print_error("Analysis resulted in empty DataFrame or failed.")
                 self.wait_for_key()
                 return
-
-            self.print_success(f"Successfully analyzed data with {len(df_analyzed.columns)} indicators.")
 
             # Train model with enhanced loading animation
             self.print_info(f"Training {args.model_type.replace('_', ' ').title()} model...")
@@ -2214,9 +1726,9 @@ class TerminalUI:
                 "Splitting data into train/test sets...",
                 "Scaling features...",
                 "Initializing model architecture...",
-                "Training model on historical data...",
-                "Optimizing model parameters...",
-                "Evaluating model performance...",
+                "Training model...",
+                "Optimizing parameters...",
+                "Evaluating performance...",
                 "Finalizing model..."
             ]
             self.show_loading_animation("Training machine learning model", duration=4, log_messages=train_logs, compact_completion=True)
@@ -2227,16 +1739,36 @@ class TerminalUI:
                 self.wait_for_key()
                 return
 
-            self.print_success("Model trained successfully")
-
-            # Show concise model information
+            # Store model information for later display
             feature_count = len(model.feature_names_in_) if hasattr(model, 'feature_names_in_') else 'Unknown'
-            print(f"Type: {args.model_type.replace('_', ' ').title()} | Features: {feature_count} | Tuning: {'Enabled' if args.tune else 'Disabled'}")
 
+            # Get a shorter version of the model path filename
+            model_filename = os.path.basename(model_path) if model_path else None
+            if model_filename and len(model_filename) > 25:
+                # Extract the symbol and model type from the filename
+                parts = model_filename.split('_')
+                if len(parts) >= 3:
+                    # Format: symbol_modeltype_timestamp.joblib
+                    symbol = parts[0]
+                    model_type = parts[1]
+                    # Get just the date part of the timestamp (first 8 chars)
+                    date_part = parts[2][:8] if len(parts[2]) > 8 else parts[2]
+                    model_filename = f"{symbol}_{model_type}_{date_part}.joblib"
+
+            all_results['model'] = {
+                'type': args.model_type.replace('_', ' ').title(),
+                'features': feature_count,
+                'tuning': args.tune,
+                'path': model_filename
+            }
+
+            # Update settings
             if model_path:
-                self.print_info(f"Model saved as: {os.path.basename(model_path)}")
                 self.settings['model_path'] = model_path
                 self.refresh_available_models()
+
+            # Mark train_model as completed
+            self.completed_functions['train_model'] = True
 
             # Make predictions
             self.print_info("Making predictions...")
@@ -2250,11 +1782,7 @@ class TerminalUI:
                 self.wait_for_key()
                 return
 
-            self.print_success("Successfully made predictions.")
-
-            # Display prediction summary instead of sample data
-            print("\nPrediction Summary:")
-
+            # Store prediction information for later display
             if 'prediction' in df_predictions.columns:
                 # Count predictions
                 pred_counts = df_predictions['prediction'].value_counts()
@@ -2266,9 +1794,15 @@ class TerminalUI:
                 bullish_pct = (bullish_count / total_preds) * 100 if total_preds > 0 else 0
                 bearish_pct = (bearish_count / total_preds) * 100 if total_preds > 0 else 0
 
-                # Display summary
-                print(f"Bullish signals: {bullish_count} ({bullish_pct:.1f}%)")
-                print(f"Bearish signals: {bearish_count} ({bearish_pct:.1f}%)")
+                all_results['predictions'] = {
+                    'bullish_count': bullish_count,
+                    'bearish_count': bearish_count,
+                    'bullish_pct': bullish_pct,
+                    'bearish_pct': bearish_pct
+                }
+
+                # Mark make_predictions as completed
+                self.completed_functions['make_predictions'] = True
 
             # Backtest
             self.print_info("Backtesting predictions...")
@@ -2278,160 +1812,115 @@ class TerminalUI:
 
             performance_metrics, trading_metrics = backtest(df_predictions, args)
 
-            # Display backtest results in a more visual way
-            print("\nBacktest Results:")
+            # Store metrics for later display
+            all_results['performance_metrics'] = performance_metrics
+            all_results['trading_metrics'] = trading_metrics
 
-            if performance_metrics:
-                self.print_success("Performance Metrics:")
-                # Format key metrics with colors
-                for key, value in performance_metrics.items():
-                    if key == 'accuracy' or key == 'f1_score':
-                        formatted_value = f"{Fore.YELLOW}{value:.4f}{Style.RESET_ALL}"
-                    elif 'profit' in key.lower() or 'return' in key.lower():
-                        color = Fore.GREEN if float(value) > 0 else Fore.RED
-                        formatted_value = f"{color}{value}{Style.RESET_ALL}"
-                    else:
-                        formatted_value = f"{value}"
-                    print(f"  {key}: {formatted_value}")
-
-            if trading_metrics:
-                self.print_success("\nTrading Metrics:")
-                # Format key metrics with colors
-                for key, value in trading_metrics.items():
-                    if key == 'win_rate' or key == 'profit_factor':
-                        color = Fore.GREEN if float(value) > 1.5 else Fore.YELLOW if float(value) > 1 else Fore.RED
-                        formatted_value = f"{color}{value}{Style.RESET_ALL}"
-                    elif 'profit' in key.lower() or 'return' in key.lower():
-                        color = Fore.GREEN if float(value) > 0 else Fore.RED
-                        formatted_value = f"{color}{value}{Style.RESET_ALL}"
-                    else:
-                        formatted_value = f"{value}"
-                    print(f"  {key}: {formatted_value}")
-
-            # Display a compact summary instead of the full analysis
-            self.print_info("\nGenerating compact analysis summary...")
-
-            # Show loading animation while preparing output
-            self.show_loading_animation("Preparing analysis summary", duration=1, compact_completion=True)
-
-            # Create a compact summary of the analysis
-            self.print_success("Analysis Summary:")
-
-            # Print a compact summary of the key metrics and signals
-            self._display_compact_summary(df_predictions, args.symbol, args.timeframe,
-                                        performance_metrics, trading_metrics)
-
-            # Perform LLM analysis if enabled
-            if args.use_llm:
-                self.print_info("\nPerforming LLM analysis...")
-
-                # Show loading animation for LLM analysis
-                self.show_loading_animation("Initializing AI analysis", duration=2, compact_completion=True)
-
-                from src.analysis.local_llm import LocalLLMAnalyzer, AVAILABLE_MODELS
-
-                # Get model info
-                model_info = AVAILABLE_MODELS.get(args.llm_model, {})
-                model_name = model_info.get('name', args.llm_model)
-
-                # Configure GPU usage
-                n_gpu_layers = 0
-                if args.use_gpu:
-                    self.print_info("GPU acceleration enabled for LLM inference.")
-                    n_gpu_layers = -1  # Use all layers on GPU
-
-                # Use the preloaded LLM analyzer if available, or initialize a new one if needed
-                if self.llm_analyzer is None or self.llm_analyzer.llm is None:
-                    # Initialize the analyzer
-                    self.llm_analyzer = LocalLLMAnalyzer(
-                        model_name=model_name,
-                        n_gpu_layers=n_gpu_layers
-                    )
-                else:
-                    self.print_info(f"Using preloaded LLM model: {self.settings['llm_model']}")
-
-                # Use the analyzer (preloaded or newly initialized)
-                llm_analyzer = self.llm_analyzer
-
-                # Show loading animation for LLM processing
-                self.show_loading_animation("AI analyzing market data", duration=3, compact_completion=True)
-
-                recommendation = llm_analyzer.analyze(df_analyzed)
-
-                if recommendation and "error" not in recommendation:
-                    self.print_success("\nLLM Analysis Results:")
-                    print(f"Trading Recommendation: {Fore.YELLOW}{recommendation['recommendation']}{Style.RESET_ALL}")
-                    print(f"Risk Assessment: {Fore.YELLOW}{recommendation['risk']}{Style.RESET_ALL}")
-
-                    # Print entry/exit levels if available
-                    entry_price = recommendation.get('entry_price')
-                    stop_loss = recommendation.get('stop_loss')
-                    take_profit = recommendation.get('take_profit')
-                    risk_reward = recommendation.get('risk_reward')
-
-                    if any(x is not None for x in [entry_price, stop_loss, take_profit, risk_reward]):
-                        print("\n" + "=" * 40)
-                        print(f"{Fore.CYAN}ENTRY/EXIT LEVELS{Style.RESET_ALL}")
-                        print("=" * 40)
-
-                        if entry_price is not None:
-                            print(f"{Fore.GREEN}Entry Price:{Style.RESET_ALL} {entry_price:.5f}")
-
-                        if stop_loss is not None:
-                            print(f"{Fore.RED}Stop Loss:{Style.RESET_ALL} {stop_loss:.5f}")
-
-                        if take_profit is not None:
-                            print(f"{Fore.GREEN}Take Profit:{Style.RESET_ALL} {take_profit:.5f}")
-
-                        if risk_reward is not None:
-                            print(f"{Fore.YELLOW}Risk/Reward Ratio:{Style.RESET_ALL} {risk_reward}")
-
-                    # Print full analysis
-                    print("\n" + recommendation['analysis'])
-
-                    # Ask user if they want to display a chart
-                    chart_choice = self.get_input("\nDisplay chart? (t)erminal, (b)rowser, or (n)o: ").lower()
-
-                    if chart_choice == 't':
-                        # Set terminal chart option
-                        args.terminal_chart = True
-                        args.interactive = False
-                        self.print_info("Displaying chart in terminal...")
-                        # Import main from PyBloat directory
-                        self._import_from_pybloat()
-                        from main import visualize
-                        visualize(df_analyzed, args, llm_recommendation=recommendation)
-                    elif chart_choice == 'b':
-                        # Use browser chart
-                        args.terminal_chart = False
-                        args.interactive = True
-                        self.print_info("Displaying chart in browser...")
-                        # Import main from PyBloat directory
-                        self._import_from_pybloat()
-                        from main import visualize
-                        visualize(df_analyzed, args, llm_recommendation=recommendation)
-                else:
-                    error_msg = recommendation.get("error", "Unknown error") if recommendation else "Failed to get recommendation"
-                    self.print_warning(f"LLM analysis skipped: {error_msg}")
-
-            # Mark all functions as completed
-            self.completed_functions['fetch_data'] = True
-            self.completed_functions['analyze_data'] = True
-            self.completed_functions['train_model'] = True
-            self.completed_functions['make_predictions'] = True
+            # Mark backtest_strategy as completed
             self.completed_functions['backtest_strategy'] = True
-            if args.use_llm:
-                self.completed_functions['llm_analysis'] = True
 
-            self.print_success("\nSuccessfully completed all operations.")
+            # Perform LLM analysis
+            self.print_info("Performing AI market analysis...")
+
+            # Show loading animation while performing LLM analysis
+            llm_logs = [
+                "Initializing AI analysis engine...",
+                "Processing market data...",
+                "Analyzing technical indicators...",
+                "Evaluating market sentiment...",
+                "Identifying key price levels...",
+                "Generating trading insights...",
+                "Finalizing market analysis..."
+            ]
+            self.show_loading_animation("Running AI market analysis", duration=3, log_messages=llm_logs, compact_completion=True)
+
+            # Import the LLM analyzer
+            from src.analysis.llm_analysis import LLMAnalyzer
+            llm_analyzer = LLMAnalyzer()
+
+            # Perform the analysis
+            llm_results = llm_analyzer.analyze_market(df_analyzed, args.symbol, args.timeframe)
+
+            # Check if we're using fallback analysis
+            if llm_results.get('is_fallback', False):
+                self.print_warning("Using fallback analysis - Ollama not available or model not loaded.")
+                self.print_info("To use the full AI analysis, install Ollama and run: 'ollama pull llama3'")
+            elif 'error' in llm_results:
+                self.print_warning(f"LLM analysis encountered an issue: {llm_results['error']}")
+
+            # Store the results
+            all_results['llm_analysis'] = llm_results
+
+            # All functions should be marked as completed at their respective steps
+
+            # Clear the screen and show a please wait animation before displaying results
+            self.show_please_wait_animation("Preparing Analysis Summary", duration=2)
+
+            # Clear previous logs except completions
+            if hasattr(self, 'collected_logs'):
+                self.collected_logs = [log for log in self.collected_logs if any(keyword in log[1].lower() for keyword in ['completed', 'success', 'finished', '✓'])]
+
+            # Display data information
+            print(f"Symbol: {args.symbol} | Timeframe: {args.timeframe} | Exchange: {all_results['data']['exchange']}")
+            print(f"Data range: {all_results['data']['time_range'][0]} to {all_results['data']['time_range'][1]}")
+
+            # Display model information
+            if 'model' in all_results:
+                model_info = all_results['model']
+                print(f"\nModel: {model_info['type']} | Features: {model_info['features']} | Tuning: {'Enabled' if model_info['tuning'] else 'Disabled'}")
+                if model_info['path']:
+                    print(f"Model: {Fore.CYAN}{model_info['path']}{Style.RESET_ALL}")
+
+            # Display prediction summary
+            if 'predictions' in all_results:
+                pred_info = all_results['predictions']
+                print("\nPrediction Summary:")
+                print(f"Bullish signals: {pred_info['bullish_count']} ({pred_info['bullish_pct']:.1f}%)")
+                print(f"Bearish signals: {pred_info['bearish_count']} ({pred_info['bearish_pct']:.1f}%)")
+
+            # Display a compact summary with all metrics
+            self._display_compact_summary(df_predictions, args.symbol, args.timeframe,
+                                        all_results['performance_metrics'], all_results['trading_metrics'])
+
+            # Display LLM analysis
+            if 'llm_analysis' in all_results and 'analysis' in all_results['llm_analysis']:
+                self._display_llm_analysis(all_results['llm_analysis'], args.symbol, args.timeframe)
+
+
+
+            # Ask user if they want to display a chart
+            chart_choice = self.get_input("\nDisplay chart? (t)erminal, (b)rowser, or (n)o: ").lower()
+
+            if chart_choice == 't':
+                # Set terminal chart option
+                args.terminal_chart = True
+                args.interactive = False
+                self.print_info("Displaying chart in terminal...")
+                # Import main from PyBloat directory
+                self._import_from_pybloat()
+                from main import visualize
+                visualize(df_analyzed, args)
+            elif chart_choice == 'b':
+                # Use browser chart
+                args.terminal_chart = False
+                args.interactive = True
+                self.print_info("Displaying chart in browser...")
+                # Import main from PyBloat directory
+                self._import_from_pybloat()
+                from main import visualize
+                visualize(df_analyzed, args)
+
+            self.print_success("\nAnalysis completed successfully!")
 
         except Exception as e:
             self.print_error(f"Error running all steps: {e}")
+            import traceback
+            self.print_error(traceback.format_exc())
 
         self.wait_for_key()
 
     def display_collected_logs(self, title="Process Logs", operation_start_time=None):
-        """Display collected logs in a comprehensive format.
+        """Display collected logs in a concise format, showing only completion messages.
 
         Args:
             title (str): Title for the log display
@@ -2440,123 +1929,45 @@ class TerminalUI:
         if not hasattr(self, 'collected_logs') or not self.collected_logs:
             return
 
-        # Print header
-        width = 80
-        print("\n" + "=" * width)
-        print(f"{Fore.CYAN}{title:^{width}}{Style.RESET_ALL}")
-        print("=" * width)
+        # Filter logs to only show completion messages
+        completion_keywords = ['completed', 'success', 'finished', '✓']
+        completion_logs = []
 
-        # Filter logs by operation time if provided
-        filtered_logs = self.collected_logs
-        if operation_start_time:
-            # Convert string timestamps to datetime objects for comparison
-            filtered_logs = []
-            for log in self.collected_logs:
-                try:
-                    # Parse timestamp (format: HH:MM:SS.mmm)
-                    log_time_str = log[0]
-                    # Get current date and combine with log time
-                    today = datetime.now().strftime("%Y-%m-%d")
-                    log_datetime = datetime.strptime(f"{today} {log_time_str}", "%Y-%m-%d %H:%M:%S.%f")
+        for timestamp_str, message in self.collected_logs:
+            # Check if this is a completion message
+            if any(keyword in message.lower() for keyword in completion_keywords):
+                # Filter by start time if provided
+                if operation_start_time:
+                    try:
+                        # Parse timestamp
+                        timestamp = datetime.strptime(timestamp_str, "%H:%M:%S.%f")
+                        # Set the date to today (since log timestamps don't include date)
+                        today = datetime.now().date()
+                        timestamp = datetime.combine(today, timestamp.time())
 
-                    # Only include logs after operation start time
-                    if log_datetime >= operation_start_time:
-                        filtered_logs.append(log)
-                except Exception:
-                    # If parsing fails, include the log anyway
-                    filtered_logs.append(log)
+                        # Only include logs after the start time
+                        if timestamp >= operation_start_time:
+                            completion_logs.append((timestamp_str, message))
+                    except ValueError:
+                        # If timestamp parsing fails, include the log anyway
+                        completion_logs.append((timestamp_str, message))
+                else:
+                    completion_logs.append((timestamp_str, message))
 
-        # Define log groups based on keywords for better organization
-        group_keywords = {
-            'data_retrieval': ['data', 'candles', 'downloading', 'fetching', 'retrieving', 'connecting', 'exchange'],
-            'data_processing': ['processing', 'validating', 'formatting', 'checking', 'preparing dataset'],
-            'technical_analysis': ['analyzing', 'indicators', 'technical', 'calculating', 'computing'],
-            'pattern_detection': ['patterns', 'support/resistance', 'trend', 'crossover', 'divergence'],
-            'indicator_calculation': ['moving averages', 'rsi', 'macd', 'bollinger', 'momentum', 'oscillators'],
-            'model_training': ['model', 'machine learning', 'training', 'hyperparameter'],
-            'prediction': ['prediction', 'signals', 'forecasting', 'probabilities'],
-            'llm_analysis': ['llm', 'ai', 'neural network', 'analyzing market data'],
-            'completion': ['completed', 'success', 'finished', '✓']
-        }
+        # If we have completion logs, display them
+        if completion_logs:
+            # Print header
+            width = 80
+            print("\n" + "=" * width)
+            print(f"{Fore.CYAN}{title:^{width}}{Style.RESET_ALL}")
+            print("=" * width)
 
-        # Function to determine log group
-        def get_log_group(message):
-            message_lower = message.lower()
-            for group, keywords in group_keywords.items():
-                if any(keyword in message_lower for keyword in keywords):
-                    return group
-            return 'other'
-
-        # Group logs by category
-        grouped_logs = {}
-        for timestamp, message in filtered_logs:
-            group = get_log_group(message)
-            if group not in grouped_logs:
-                grouped_logs[group] = []
-            grouped_logs[group].append((timestamp, message))
-
-        # Define the order of groups for display
-        group_order = [
-            'data_retrieval',
-            'data_processing',
-            'technical_analysis',
-            'indicator_calculation',
-            'pattern_detection',
-            'model_training',
-            'prediction',
-            'llm_analysis',
-            'completion',
-            'other'
-        ]
-
-        # Print section headers and logs by group
-        for group in group_order:
-            if group in grouped_logs and grouped_logs[group]:
-                # Print section header
-                group_display_name = group.replace('_', ' ').title()
-                print(f"\n{Fore.YELLOW}{group_display_name}:{Style.RESET_ALL}")
-
-                # Sort logs within group by timestamp
-                group_logs = sorted(grouped_logs[group], key=lambda x: x[0])
-
-                # Print logs with colors
-                for timestamp, message in group_logs:
-                    # Choose color based on message content
-                    if "error" in message.lower() or "failed" in message.lower():
-                        color = Fore.RED
-                    elif "warning" in message.lower():
-                        color = Fore.YELLOW
-                    elif "completed" in message.lower() or "success" in message.lower() or "✓" in message:
-                        color = Fore.GREEN
-                    else:
-                        # Use different colors for different groups
-                        if group == 'data_retrieval':
-                            color = Fore.CYAN
-                        elif group == 'technical_analysis' or group == 'indicator_calculation':
-                            color = Fore.MAGENTA
-                        elif group == 'pattern_detection':
-                            color = Fore.BLUE
-                        elif group == 'model_training' or group == 'prediction':
-                            color = Fore.GREEN
-                        elif group == 'llm_analysis':
-                            color = Fore.YELLOW
-                        else:
-                            color = Fore.WHITE
-
-                    # Print formatted log entry with timestamp
-                    print(f"  {Fore.WHITE}[{timestamp}]{Style.RESET_ALL} {color}{message}{Style.RESET_ALL}")
-
-        # Add a summary section if we have completion logs
-        if 'completion' in grouped_logs and grouped_logs['completion']:
-            print(f"\n{Fore.GREEN}Summary:{Style.RESET_ALL}")
-            for timestamp, message in sorted(grouped_logs['completion'], key=lambda x: x[0]):
+            # Print completion logs
+            for timestamp, message in sorted(completion_logs, key=lambda x: x[0]):
                 print(f"  {Fore.WHITE}[{timestamp}]{Style.RESET_ALL} {Fore.GREEN}{message}{Style.RESET_ALL}")
 
-        # Clear logs after displaying them
-        self.collected_logs = []
-
-        print("=" * width)
-        print()
+            print("=" * width)
+            print()
 
     def show_how_to_use(self):
         """Display the 'How to Use' guide."""
@@ -2599,6 +2010,117 @@ class TerminalUI:
         print(f"{Fore.MAGENTA}You can open these files in any text editor or markdown viewer.{Style.RESET_ALL}")
 
         self.wait_for_key()
+
+    def _display_llm_analysis(self, llm_results, symbol, timeframe):
+        """
+        Display LLM analysis results in a formatted box.
+
+        Args:
+            llm_results (dict): Results from the LLM analysis
+            symbol (str): Trading symbol
+            timeframe (str): Timeframe of the analysis
+        """
+        try:
+            # Create a box for the LLM analysis
+            width = 80
+            print("\n" + "=" * width)
+            print(f"{Fore.CYAN}AI MARKET ANALYSIS - {symbol} ({timeframe}){Style.RESET_ALL}".center(width))
+            print("=" * width)
+
+            # Check if there was an error or using fallback
+            if llm_results.get('is_fallback', False):
+                print(f"{Fore.YELLOW}Note: Using algorithmic analysis. Full AI analysis requires Ollama.{Style.RESET_ALL}")
+                print(f"{Fore.CYAN}To enable AI analysis: Install Ollama and run 'ollama pull llama3'{Style.RESET_ALL}\n")
+            elif 'error' in llm_results:
+                print(f"{Fore.YELLOW}Note: {llm_results['error']}{Style.RESET_ALL}\n")
+
+            # Display sentiment with color
+            sentiment = llm_results.get('sentiment', 'neutral').lower()
+            sentiment_color = Fore.WHITE
+            if sentiment == 'bullish':
+                sentiment_color = Fore.GREEN
+            elif sentiment == 'bearish':
+                sentiment_color = Fore.RED
+            elif sentiment == 'neutral':
+                sentiment_color = Fore.YELLOW
+
+            print(f"{Fore.WHITE}Market Sentiment: {sentiment_color}{sentiment.capitalize()}{Style.RESET_ALL}")
+
+            # Display risk level with color
+            risk = llm_results.get('risk', 'medium').lower()
+            risk_color = Fore.WHITE
+            if risk == 'low':
+                risk_color = Fore.GREEN
+            elif risk == 'medium':
+                risk_color = Fore.YELLOW
+            elif risk == 'high':
+                risk_color = Fore.RED
+
+            print(f"{Fore.WHITE}Risk Level: {risk_color}{risk.capitalize()}{Style.RESET_ALL}")
+
+            # Display timestamp
+            if 'timestamp' in llm_results:
+                print(f"{Fore.WHITE}Analysis Time: {Fore.CYAN}{llm_results['timestamp']}{Style.RESET_ALL}")
+
+            print("\n" + "-" * width)
+
+            # Format and display the analysis text
+            analysis_text = llm_results.get('analysis', 'No analysis available.')
+
+            # Split the text into paragraphs
+            paragraphs = analysis_text.split('\n\n')
+
+            for paragraph in paragraphs:
+                # Check if this is a numbered list item
+                if paragraph.strip() and paragraph.strip()[0].isdigit() and ". " in paragraph:
+                    # Print each line of the paragraph
+                    for line in paragraph.split('\n'):
+                        if line.strip():
+                            # Highlight numbers in lists
+                            if line.strip()[0].isdigit() and ". " in line:
+                                parts = line.split(". ", 1)
+                                print(f"{Fore.CYAN}{parts[0]}.{Style.RESET_ALL} {parts[1]}")
+                            else:
+                                print(line)
+                else:
+                    # Print the paragraph with word wrapping
+                    self._print_wrapped_text(paragraph, width - 4)
+
+                # Add spacing between paragraphs
+                print()
+
+            print("=" * width)
+
+        except Exception as e:
+            print(f"{Fore.RED}Error displaying LLM analysis: {e}{Style.RESET_ALL}")
+
+    def _print_wrapped_text(self, text, width):
+        """
+        Print text with word wrapping.
+
+        Args:
+            text (str): Text to print
+            width (int): Maximum width for each line
+        """
+        # Split the text into words
+        words = text.split()
+        if not words:
+            print()
+            return
+
+        # Build lines word by word
+        current_line = words[0]
+        for word in words[1:]:
+            # If adding the next word would exceed the width, print the current line and start a new one
+            if len(current_line) + len(word) + 1 > width:
+                print(current_line)
+                current_line = word
+            else:
+                current_line += " " + word
+
+        # Print the last line
+        if current_line:
+            print(current_line)
 
     def _display_compact_summary(self, df, symbol, timeframe, performance_metrics=None, trading_metrics=None):
         """Display a compact summary of the analysis results.
@@ -2823,7 +2345,6 @@ class TerminalUI:
         # Reset completed functions if relevant directories were cleared
         if 'data' in directories_to_clear or 'results' in directories_to_clear:
             self.completed_functions['fetch_data'] = False
-            self.completed_functions['analyze_data'] = False
 
         if 'models' in directories_to_clear:
             self.completed_functions['train_model'] = False
@@ -2831,7 +2352,6 @@ class TerminalUI:
         if 'results' in directories_to_clear:
             self.completed_functions['make_predictions'] = False
             self.completed_functions['backtest_strategy'] = False
-            self.completed_functions['llm_analysis'] = False
 
         # Update available models list if models directory was cleared
         if 'models' in directories_to_clear:
@@ -2839,23 +2359,360 @@ class TerminalUI:
 
         self.wait_for_key()
 
+    def set_terminal_size(self, cols=80, lines=30):
+        """Set the terminal window size.
+
+        Args:
+            cols (int): Number of columns (width)
+            lines (int): Number of lines (height)
+        """
+        try:
+            # On Windows, use mode command to set terminal size
+            if os.name == 'nt':
+                os.system(f'mode con: cols={cols} lines={lines}')
+            # Unix systems would use stty, but we're focusing on Windows for now
+        except Exception as e:
+            logger.error(f"Error setting terminal size: {e}")
+
+    def show_previous_analyses(self):
+        """Show previous analyses."""
+        self.print_header("Previous Analyses")
+
+        # Get previous analyses
+        analyses = get_previous_analyses()
+
+        if not analyses:
+            self.print_info("No previous analyses found.")
+            self.wait_for_key()
+            return
+
+        # Group analyses by symbol
+        symbols = sorted(list(set([info['symbol'] for _, files in analyses.items() for info in files])))
+
+        # Display available symbols
+        self.print_info("Available symbols with previous analyses:")
+        for i, symbol in enumerate(symbols, 1):
+            print(f"{Fore.GREEN}{i}{Style.RESET_ALL}: {symbol}")
+
+        print(f"{Fore.GREEN}b{Style.RESET_ALL}: Back to main menu")
+
+        # Get user choice
+        choice = self.get_input("\nSelect a symbol: ")
+
+        if choice.lower() == 'b':
+            return
+
+        try:
+            symbol_index = int(choice) - 1
+            if symbol_index < 0 or symbol_index >= len(symbols):
+                self.print_error("Invalid choice.")
+                time.sleep(1)
+                return
+
+            selected_symbol = symbols[symbol_index]
+            self.show_symbol_analyses(selected_symbol, analyses)
+
+        except ValueError:
+            self.print_error("Invalid choice.")
+            time.sleep(1)
+
+    def show_symbol_analyses(self, symbol, analyses=None):
+        """Show analyses for a specific symbol."""
+        if analyses is None:
+            analyses = get_previous_analyses()
+
+        self.print_header(f"Previous Analyses for {symbol}")
+
+        # Filter analyses for the selected symbol
+        symbol_analyses = {}
+        for _, files in analyses.items():
+            for file_info in files:
+                if file_info['symbol'] == symbol:
+                    timeframe = file_info['timeframe']
+                    if timeframe not in symbol_analyses:
+                        symbol_analyses[timeframe] = []
+                    symbol_analyses[timeframe].append(file_info)
+
+        if not symbol_analyses:
+            self.print_info(f"No analyses found for {symbol}.")
+            self.wait_for_key()
+            return
+
+        # Display available timeframes
+        self.print_info("Available timeframes:")
+        timeframes = sorted(symbol_analyses.keys())
+        for i, timeframe in enumerate(timeframes, 1):
+            print(f"{Fore.GREEN}{i}{Style.RESET_ALL}: {timeframe} ({len(symbol_analyses[timeframe])} analyses)")
+
+        print(f"{Fore.GREEN}b{Style.RESET_ALL}: Back to symbol selection")
+
+        # Get user choice
+        choice = self.get_input("\nSelect a timeframe: ")
+
+        if choice.lower() == 'b':
+            self.show_previous_analyses()
+            return
+
+        try:
+            timeframe_index = int(choice) - 1
+            if timeframe_index < 0 or timeframe_index >= len(timeframes):
+                self.print_error("Invalid choice.")
+                time.sleep(1)
+                return
+
+            selected_timeframe = timeframes[timeframe_index]
+            self.show_timeframe_analyses(symbol, selected_timeframe, symbol_analyses[selected_timeframe])
+
+        except ValueError:
+            self.print_error("Invalid choice.")
+            time.sleep(1)
+
+    def show_timeframe_analyses(self, symbol, timeframe, analyses):
+        """Show analyses for a specific symbol and timeframe."""
+        self.print_header(f"Previous Analyses for {symbol} ({timeframe})")
+
+        # Group analyses by type
+        analyses_by_type = {}
+        for analysis in analyses:
+            file_type = analysis['type']
+            if file_type not in analyses_by_type:
+                analyses_by_type[file_type] = []
+            analyses_by_type[file_type].append(analysis)
+
+        # Display available analysis types
+        self.print_info("Available analysis types:")
+        types = sorted(analyses_by_type.keys())
+        for i, analysis_type in enumerate(types, 1):
+            print(f"{Fore.GREEN}{i}{Style.RESET_ALL}: {analysis_type} ({len(analyses_by_type[analysis_type])} files)")
+
+        print(f"{Fore.GREEN}b{Style.RESET_ALL}: Back to timeframe selection")
+
+        # Get user choice
+        choice = self.get_input("\nSelect an analysis type: ")
+
+        if choice.lower() == 'b':
+            self.show_symbol_analyses(symbol)
+            return
+
+        try:
+            type_index = int(choice) - 1
+            if type_index < 0 or type_index >= len(types):
+                self.print_error("Invalid choice.")
+                time.sleep(1)
+                return
+
+            selected_type = types[type_index]
+            self.show_analysis_files(symbol, timeframe, selected_type, analyses_by_type[selected_type])
+
+        except ValueError:
+            self.print_error("Invalid choice.")
+            time.sleep(1)
+
+    def show_analysis_files(self, symbol, timeframe, analysis_type, analyses):
+        """Show analysis files for a specific symbol, timeframe, and type."""
+        self.print_header(f"{analysis_type.title()} Analyses for {symbol} ({timeframe})")
+
+        # Sort analyses by datetime (most recent first)
+        analyses.sort(key=lambda x: x['datetime'], reverse=True)
+
+        # Display available analysis files
+        self.print_info("Available analysis files:")
+        for i, analysis in enumerate(analyses, 1):
+            # Format the datetime
+            date_str = analysis['datetime'].strftime("%Y-%m-%d %H:%M:%S")
+            print(f"{Fore.GREEN}{i}{Style.RESET_ALL}: {date_str} - {analysis['filename']}")
+
+        print(f"{Fore.GREEN}b{Style.RESET_ALL}: Back to analysis type selection")
+
+        # Get user choice
+        choice = self.get_input("\nSelect an analysis file: ")
+
+        if choice.lower() == 'b':
+            self.show_timeframe_analyses(symbol, timeframe, analyses)
+            return
+
+        try:
+            file_index = int(choice) - 1
+            if file_index < 0 or file_index >= len(analyses):
+                self.print_error("Invalid choice.")
+                time.sleep(1)
+                return
+
+            selected_file = analyses[file_index]
+            self.display_analysis_file(selected_file)
+
+        except ValueError:
+            self.print_error("Invalid choice.")
+            time.sleep(1)
+
+    def display_analysis_file(self, file_info):
+        """Display the contents of an analysis file."""
+        self.print_header(f"Analysis File: {file_info['filename']}")
+
+        # Load the file
+        data, file_type = load_previous_analysis(file_info['path'])
+
+        if data is None:
+            self.print_error(f"Failed to load file: {file_info['path']}")
+            self.wait_for_key()
+            return
+
+        # Display the file contents based on type
+        if file_type == 'dataframe':
+            # Display DataFrame summary
+            self.print_info(f"DataFrame with {len(data)} rows and {len(data.columns)} columns")
+            print("\nColumns:")
+            for col in data.columns:
+                print(f"  {col}")
+
+            print("\nSample data:")
+            print(data.head().to_string())
+
+            # Display key indicators if available
+            latest = data.iloc[-1] if not data.empty else None
+            if latest is not None:
+                print("\nKey indicators:")
+
+                # Show RSI if available
+                if 'rsi_14' in data.columns:
+                    rsi = latest['rsi_14']
+                    rsi_status = "Oversold" if rsi < 30 else "Overbought" if rsi > 70 else "Neutral"
+                    rsi_color = Fore.RED if rsi < 30 else Fore.GREEN if rsi > 70 else Fore.WHITE
+                    print(f"RSI (14): {rsi_color}{rsi:.2f} - {rsi_status}{Style.RESET_ALL}")
+
+                # Show MACD if available
+                if 'MACD_12_26_9' in data.columns and 'MACDs_12_26_9' in data.columns:
+                    macd = latest['MACD_12_26_9']
+                    signal = latest['MACDs_12_26_9']
+                    macd_hist = macd - signal
+                    macd_status = "Bullish" if macd > signal else "Bearish"
+                    macd_color = Fore.GREEN if macd > signal else Fore.RED
+                    print(f"MACD: {macd_color}{macd:.4f} - {macd_status}{Style.RESET_ALL} (H: {macd_hist:.4f})")
+
+                # Show Moving Averages if available
+                if 'sma_50' in data.columns and 'sma_200' in data.columns:
+                    sma_50 = latest['sma_50']
+                    sma_200 = latest['sma_200']
+                    ma_status = "Golden Cross" if sma_50 > sma_200 else "Death Cross"
+                    ma_color = Fore.GREEN if sma_50 > sma_200 else Fore.RED
+                    print(f"MA Cross: {ma_color}{ma_status}{Style.RESET_ALL} ({sma_50:.2f}/{sma_200:.2f})")
+
+                # Show prediction if available
+                if 'prediction' in data.columns:
+                    pred_value = latest['prediction']
+                    pred_prob = latest.get('prediction_probability', 0.5)
+                    pred_text = "Bullish" if pred_value == 1 else "Bearish"
+                    pred_color = Fore.GREEN if pred_value == 1 else Fore.RED
+                    print(f"Prediction: {pred_color}{pred_text}{Style.RESET_ALL} ({pred_prob:.2f})")
+
+        elif file_type == 'json':
+            # Display JSON data
+            if isinstance(data, dict):
+                # Format the JSON data for display
+                for key, value in data.items():
+                    if key == 'performance' or key == 'trading':
+                        print(f"\n{Fore.YELLOW}{key.title()} Metrics:{Style.RESET_ALL}")
+                        for metric_key, metric_value in value.items():
+                            print(f"  {metric_key}: {metric_value}")
+                    elif key == 'analysis':
+                        print(f"\n{Fore.YELLOW}Analysis:{Style.RESET_ALL}")
+                        print(value)
+                    elif key == 'sentiment':
+                        sentiment_color = Fore.GREEN if value == 'bullish' else Fore.RED if value == 'bearish' else Fore.YELLOW
+                        print(f"\n{Fore.YELLOW}Sentiment:{Style.RESET_ALL} {sentiment_color}{value}{Style.RESET_ALL}")
+                    elif key == 'risk':
+                        risk_color = Fore.GREEN if value == 'low' else Fore.RED if value == 'high' else Fore.YELLOW
+                        print(f"\n{Fore.YELLOW}Risk:{Style.RESET_ALL} {risk_color}{value}{Style.RESET_ALL}")
+                    else:
+                        print(f"\n{Fore.YELLOW}{key.title()}:{Style.RESET_ALL} {value}")
+            else:
+                # Just print the JSON data
+                print(json.dumps(data, indent=2))
+
+        elif file_type == 'text':
+            # Display text data
+            print(data)
+
+        elif file_type == 'pickle':
+            # Display pickle data summary
+            if isinstance(data, dict):
+                print(f"Dictionary with {len(data)} keys:")
+                for key in data.keys():
+                    print(f"  {key}")
+            elif isinstance(data, pd.DataFrame):
+                print(f"DataFrame with {len(data)} rows and {len(data.columns)} columns")
+                print("\nColumns:")
+                for col in data.columns:
+                    print(f"  {col}")
+                print("\nSample data:")
+                print(data.head().to_string())
+            else:
+                print(f"Data type: {type(data)}")
+                print(str(data)[:1000] + "..." if len(str(data)) > 1000 else str(data))
+
+        # Ask if the user wants to use this analysis for the current session
+        print("\n" + "=" * 80)
+        choice = self.get_input("\nUse this analysis for the current session? (y/n): ")
+
+        if choice.lower() == 'y':
+            # Update settings with the symbol and timeframe from the file
+            self.settings['symbol'] = file_info['symbol']
+            self.settings['timeframe'] = file_info['timeframe']
+            self.settings['exchange'] = self.settings.get('exchange', 'kraken')  # Use current exchange or default to kraken
+
+            # Save settings
+            self.save_current_settings()
+
+            self.print_success(f"Updated current session to use {file_info['symbol']} on {file_info['timeframe']} timeframe.")
+
+        self.wait_for_key()
+
+    def load_saved_settings(self):
+        """Load saved settings from file."""
+        try:
+            saved_settings = load_settings()
+            if saved_settings:
+                # Update settings with saved values, keeping defaults for any missing keys
+                for key, value in saved_settings.items():
+                    if key in self.settings:
+                        self.settings[key] = value
+                self.print_info(f"Loaded saved settings for {self.settings['symbol']} on {self.settings['exchange']}")
+        except Exception as e:
+            logger.error(f"Error loading settings: {e}")
+
+    def save_current_settings(self):
+        """Save current settings to file."""
+        try:
+            # Save settings
+            save_settings(self.settings)
+            logger.info(f"Saved settings for {self.settings['symbol']} on {self.settings['exchange']}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving settings: {e}")
+            return False
+
     def show_exit_screen(self):
-        """Show the exit screen with donation information."""
+        """Show a simple exit screen."""
+        # Save current settings before exiting
+        self.save_current_settings()
+
+        # Set terminal size
+        self.set_terminal_size(80, 30)
+
         self.clear_screen()
         width = 80
         print(Fore.CYAN + "=" * width + Style.RESET_ALL)
-        title = ""
+        title = "Thanks for using Blacks Scanner"
         print(Fore.CYAN + f"{title:^{width}}" + Style.RESET_ALL)
         print(Fore.CYAN + "=" * width + Style.RESET_ALL)
         print()
-        print(f"{Fore.YELLOW}Please consider donating to support the development of this tool:{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}I'll probably just buy a vape or something{Style.RESET_ALL}")
-        print()
-        print(f"{Fore.CYAN}CGUDnm2vjTthuuxdYv7wJG6r9akxq8ascgsCXB7Dvgjz{Style.RESET_ALL}")
+
+        # Simple goodbye message
+        print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
         print()
 
-        # Display a countdown for 10 seconds
-        for i in range(10, 0, -1):
+        # Display a countdown for 5 seconds
+        for i in range(5, 0, -1):
             print(f"Exiting in {i} seconds...\r", end="")
             time.sleep(1)
 
@@ -2868,28 +2725,38 @@ class TerminalUI:
             self.current_menu()
 
 
+# Terminal window size is now handled by the TerminalUI.set_terminal_size method
+
 def display_splash_screen():
     """Display a cool ASCII splash screen."""
+    # Set the window size to match the screenshot dimensions
+    # Use os.system directly since this is outside the class
+    try:
+        # On Windows, use mode command to set terminal size
+        if os.name == 'nt':
+            os.system('mode con: cols=100 lines=30')
+        # Unix systems would use stty, but we're focusing on Windows for now
+    except Exception as e:
+        logger.error(f"Error setting terminal size: {e}")
+
     # Clear the screen first
     os.system('cls' if os.name == 'nt' else 'clear')
 
-    # Define the ASCII art for the splash screen
+    # Define the ASCII art for the splash screen using standard ASCII characters
     splash = f"""
-{Fore.CYAN}    ██████╗ ██╗      █████╗  ██████╗██╗  ██╗███████╗{Style.RESET_ALL}
-{Fore.CYAN}    ╚════██╗██║     ██╔══██╗██╔════╝██║ ██╔╝██╔════╝{Style.RESET_ALL}
-{Fore.CYAN}     █████╔╝██║     ███████║██║     █████╔╝ ███████╗{Style.RESET_ALL}
-{Fore.CYAN}     ╚═══██╗██║     ██╔══██║██║     ██╔═██╗ ╚════██║{Style.RESET_ALL}
-{Fore.CYAN}    ██████╔╝███████╗██║  ██║╚██████╗██║  ██╗███████║{Style.RESET_ALL}
-{Fore.CYAN}    ╚═════╝ ╚══════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝{Style.RESET_ALL}
+{Fore.CYAN}   ____  _               _        {Style.RESET_ALL}
+{Fore.CYAN}  | __ )| | __ _  ___  | | _____ {Style.RESET_ALL}
+{Fore.CYAN}  |  _ \| |/ _` |/ __| | |/ / __|{Style.RESET_ALL}
+{Fore.CYAN}  | |_) | | (_| | (__  |   <\__ \{Style.RESET_ALL}
+{Fore.CYAN}  |____/|_|\__,_|\___| |_|\_\___/{Style.RESET_ALL}
 
-{Fore.GREEN}    ███████╗ ██████╗ █████╗ ███╗   ██╗███╗   ██╗███████╗██████╗ {Style.RESET_ALL}
-{Fore.GREEN}    ██╔════╝██╔════╝██╔══██╗████╗  ██║████╗  ██║██╔════╝██╔══██╗{Style.RESET_ALL}
-{Fore.GREEN}    ███████╗██║     ███████║██╔██╗ ██║██╔██╗ ██║█████╗  ██████╔╝{Style.RESET_ALL}
-{Fore.GREEN}    ╚════██║██║     ██╔══██║██║╚██╗██║██║╚██╗██║██╔══╝  ██╔══██╗{Style.RESET_ALL}
-{Fore.GREEN}    ███████║╚██████╗██║  ██║██║ ╚████║██║ ╚████║███████╗██║  ██║{Style.RESET_ALL}
-{Fore.GREEN}    ╚══════╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝{Style.RESET_ALL}
+{Fore.GREEN}   ____                                 {Style.RESET_ALL}
+{Fore.GREEN}  / ___|  ___ __ _ _ __  _ __   ___ _ __ {Style.RESET_ALL}
+{Fore.GREEN}  \___ \ / __/ _` | '_ \| '_ \ / _ \ '__|{Style.RESET_ALL}
+{Fore.GREEN}   ___) | (_| (_| | | | | | | |  __/ |   {Style.RESET_ALL}
+{Fore.GREEN}  |____/ \___\__,_|_| |_|_| |_|\___|_|   {Style.RESET_ALL}
 
-{Fore.YELLOW}                 Cryptocurrency Technical Analysis Tool{Style.RESET_ALL}
+{Fore.YELLOW}                Cryptocurrency Technical Analysis Tool{Style.RESET_ALL}
 {Fore.BLUE}                      Version 1.0.0 - 2025{Style.RESET_ALL}
 
 """
@@ -2918,6 +2785,10 @@ def main():
 
     # Initialize and run the UI
     ui = TerminalUI()
+
+    # The UI will automatically load saved settings in its __init__ method
+    # and save settings when exiting
+
     ui.run()
 
 

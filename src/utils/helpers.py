@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import json
 import logging
+import hashlib
 from datetime import datetime, timedelta
 
 # Configure logging - only show errors
@@ -47,13 +48,22 @@ def save_dataframe(df, filepath, format='csv'):
         format (str): File format ('csv', 'parquet', or 'pickle')
 
     Returns:
-        bool: True if successful, False otherwise
+        str: Path to the saved file if successful, None otherwise
     """
     try:
         # Create directory if it doesn't exist
         directory = os.path.dirname(filepath)
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
+
+        # Check if filepath has the correct extension
+        ext = os.path.splitext(filepath)[1].lower()
+        if format.lower() == 'csv' and ext != '.csv':
+            filepath = f"{filepath}.csv"
+        elif format.lower() == 'parquet' and ext != '.parquet':
+            filepath = f"{filepath}.parquet"
+        elif format.lower() == 'pickle' and ext not in ['.pkl', '.pickle']:
+            filepath = f"{filepath}.pkl"
 
         # Save DataFrame
         if format.lower() == 'csv':
@@ -64,13 +74,13 @@ def save_dataframe(df, filepath, format='csv'):
             df.to_pickle(filepath)
         else:
             logger.error(f"Unsupported format: {format}")
-            return False
+            return None
 
         logger.info(f"Saved DataFrame to {filepath}")
-        return True
+        return filepath
     except Exception as e:
         logger.error(f"Error saving DataFrame to {filepath}: {e}")
-        return False
+        return None
 
 def load_dataframe(filepath, format=None):
     """
@@ -87,6 +97,7 @@ def load_dataframe(filepath, format=None):
     try:
         # Infer format from file extension if not provided
         if format is None:
+            # Check if filepath has an extension
             ext = os.path.splitext(filepath)[1].lower()
             if ext == '.csv':
                 format = 'csv'
@@ -95,8 +106,11 @@ def load_dataframe(filepath, format=None):
             elif ext in ['.pkl', '.pickle']:
                 format = 'pickle'
             else:
-                logger.error(f"Could not infer format from extension: {ext}")
-                return None
+                # If no extension or unrecognized extension, assume it's a CSV file
+                # and append .csv to the filepath
+                logger.warning(f"No recognized extension in {filepath}, assuming CSV format")
+                filepath = f"{filepath}.csv"
+                format = 'csv'
 
         # Load DataFrame
         if format.lower() == 'csv':
@@ -301,6 +315,300 @@ def calculate_trading_metrics(df, prediction_col='prediction', price_col='close'
         return None
 
 
+def get_cache_directory():
+    """
+    Get the cache directory for the application.
+
+    Returns:
+        str: Path to the cache directory
+    """
+    cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "futures_scanner")
+    create_directory(cache_dir)
+    return cache_dir
+
+def get_analysis_cache_path(symbol, exchange, timeframe):
+    """
+    Get the path to the cached analysis file for a specific symbol, exchange, and timeframe.
+
+    Args:
+        symbol (str): Trading symbol
+        exchange (str): Exchange name
+        timeframe (str): Timeframe of the data
+
+    Returns:
+        str: Path to the cached analysis file
+    """
+    cache_dir = get_cache_directory()
+    analysis_cache_dir = os.path.join(cache_dir, "analysis_cache")
+    create_directory(analysis_cache_dir)
+
+    # Create a filename based on the symbol, exchange, and timeframe
+    filename = f"{symbol.replace('/', '_')}_{exchange}_{timeframe}_analysis.pkl"
+    return os.path.join(analysis_cache_dir, filename)
+
+def save_analysis_to_cache(df, symbol, exchange, timeframe, max_age_hours=24):
+    """
+    Save analysis results to cache.
+
+    Args:
+        df (pd.DataFrame): DataFrame with analysis results
+        symbol (str): Trading symbol
+        exchange (str): Exchange name
+        timeframe (str): Timeframe of the data
+        max_age_hours (int): Maximum age of the cache in hours
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Create a dictionary with the analysis data and metadata
+        cache_data = {
+            'timestamp': datetime.now().isoformat(),
+            'symbol': symbol,
+            'exchange': exchange,
+            'timeframe': timeframe,
+            'max_age_hours': max_age_hours,
+            'data': df
+        }
+
+        # Get the cache file path
+        cache_path = get_analysis_cache_path(symbol, exchange, timeframe)
+
+        # Save to pickle file
+        with open(cache_path, 'wb') as f:
+            pd.to_pickle(cache_data, f)
+
+        logger.info(f"Saved analysis to cache: {cache_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving analysis to cache: {e}")
+        return False
+
+def load_analysis_from_cache(symbol, exchange, timeframe):
+    """
+    Load analysis results from cache if available and not expired.
+
+    Args:
+        symbol (str): Trading symbol
+        exchange (str): Exchange name
+        timeframe (str): Timeframe of the data
+
+    Returns:
+        pd.DataFrame: DataFrame with analysis results, or None if not available or expired
+    """
+    try:
+        # Get the cache file path
+        cache_path = get_analysis_cache_path(symbol, exchange, timeframe)
+
+        # Check if cache file exists
+        if not os.path.exists(cache_path):
+            logger.info(f"No cache file found for {symbol} on {exchange} ({timeframe})")
+            return None
+
+        # Load cache data
+        with open(cache_path, 'rb') as f:
+            cache_data = pd.read_pickle(f)
+
+        # Check if cache is expired
+        cache_timestamp = datetime.fromisoformat(cache_data['timestamp'])
+        max_age_hours = cache_data.get('max_age_hours', 24)
+        cache_age = datetime.now() - cache_timestamp
+
+        if cache_age > timedelta(hours=max_age_hours):
+            logger.info(f"Cache expired for {symbol} on {exchange} ({timeframe})")
+            return None
+
+        logger.info(f"Loaded analysis from cache: {cache_path}")
+        return cache_data['data']
+    except Exception as e:
+        logger.error(f"Error loading analysis from cache: {e}")
+        return None
+
+def get_settings_path():
+    """
+    Get the path to the settings file.
+
+    Returns:
+        str: Path to the settings file
+    """
+    cache_dir = get_cache_directory()
+    return os.path.join(cache_dir, "settings.json")
+
+def save_settings(settings):
+    """
+    Save application settings to a file.
+
+    Args:
+        settings (dict): Settings dictionary
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        settings_path = get_settings_path()
+        return save_config(settings, settings_path)
+    except Exception as e:
+        logger.error(f"Error saving settings: {e}")
+        return False
+
+def load_settings():
+    """
+    Load application settings from a file.
+
+    Returns:
+        dict: Settings dictionary, or None if error
+    """
+    try:
+        settings_path = get_settings_path()
+        if not os.path.exists(settings_path):
+            logger.info(f"No settings file found at {settings_path}")
+            return None
+        return load_config(settings_path)
+    except Exception as e:
+        logger.error(f"Error loading settings: {e}")
+        return None
+
+def get_previous_analyses():
+    """
+    Get a list of previous analyses from the results directory.
+
+    Returns:
+        dict: Dictionary with symbol/timeframe as keys and lists of analysis files as values
+    """
+    try:
+        # Create results directory if it doesn't exist
+        create_directory('results')
+
+        # Dictionary to store analyses by symbol and timeframe
+        analyses = {}
+
+        # List all files in the results directory
+        for filename in os.listdir('results'):
+            # Skip directories
+            if os.path.isdir(os.path.join('results', filename)):
+                continue
+
+            # Parse filename to extract symbol, timeframe, and type
+            parts = filename.split('_')
+
+            # Skip files that don't match our naming pattern
+            if len(parts) < 3:
+                continue
+
+            # Handle symbol with underscore (e.g., BTC_USDT from BTC/USDT)
+            if len(parts) >= 4 and parts[1] in ['USDT', 'USD', 'BUSD', 'USDC']:
+                symbol = f"{parts[0]}/{parts[1]}"
+                timeframe = parts[2]
+                file_type = '_'.join(parts[3:]).split('.')[0]
+                timestamp = None
+
+                # Extract timestamp if present
+                for part in parts[3:]:
+                    if len(part) == 8 and part.isdigit():
+                        timestamp = part
+                    elif len(part) == 14 and part.isdigit():
+                        timestamp = part
+            else:
+                symbol = parts[0]
+                timeframe = parts[1]
+                file_type = '_'.join(parts[2:]).split('.')[0]
+                timestamp = None
+
+                # Extract timestamp if present
+                for part in parts[2:]:
+                    if len(part) == 8 and part.isdigit():
+                        timestamp = part
+                    elif len(part) == 14 and part.isdigit():
+                        timestamp = part
+
+            # Create a key for the symbol and timeframe
+            key = f"{symbol}_{timeframe}"
+
+            # Add to the dictionary
+            if key not in analyses:
+                analyses[key] = []
+
+            # Add file info
+            file_info = {
+                'filename': filename,
+                'path': os.path.join('results', filename),
+                'symbol': symbol,
+                'timeframe': timeframe,
+                'type': file_type,
+                'timestamp': timestamp,
+                'datetime': None
+            }
+
+            # Try to parse the timestamp
+            if timestamp:
+                try:
+                    if len(timestamp) == 8:
+                        # Format: YYYYMMDD
+                        file_info['datetime'] = datetime.strptime(timestamp, '%Y%m%d')
+                    elif len(timestamp) == 14:
+                        # Format: YYYYMMDD_HHMMSS
+                        file_info['datetime'] = datetime.strptime(timestamp, '%Y%m%d_%H%M%S')
+                except ValueError:
+                    pass
+
+            # Get file modification time as fallback
+            if file_info['datetime'] is None:
+                file_info['datetime'] = datetime.fromtimestamp(
+                    os.path.getmtime(os.path.join('results', filename))
+                )
+
+            analyses[key].append(file_info)
+
+        # Sort each list by datetime (most recent first)
+        for key in analyses:
+            analyses[key].sort(key=lambda x: x['datetime'], reverse=True)
+
+        return analyses
+    except Exception as e:
+        logger.error(f"Error getting previous analyses: {e}")
+        return {}
+
+def load_previous_analysis(file_path):
+    """
+    Load a previous analysis from a file.
+
+    Args:
+        file_path (str): Path to the analysis file
+
+    Returns:
+        tuple: (DataFrame or dict, file_type) - The loaded analysis data and the type of file
+    """
+    try:
+        # Get the file extension
+        ext = os.path.splitext(file_path)[1].lower()
+
+        # Load based on file type
+        if ext == '.csv':
+            # Load DataFrame
+            df = load_dataframe(file_path)
+            return df, 'dataframe'
+        elif ext == '.json':
+            # Load JSON
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            return data, 'json'
+        elif ext == '.txt':
+            # Load text
+            with open(file_path, 'r') as f:
+                data = f.read()
+            return data, 'text'
+        elif ext in ['.pkl', '.pickle']:
+            # Load pickle
+            with open(file_path, 'rb') as f:
+                data = pd.read_pickle(f)
+            return data, 'pickle'
+        else:
+            logger.error(f"Unsupported file type: {ext}")
+            return None, None
+    except Exception as e:
+        logger.error(f"Error loading previous analysis: {e}")
+        return None, None
+
 # Example usage
 if __name__ == "__main__":
     # Create a sample DataFrame
@@ -322,3 +630,8 @@ if __name__ == "__main__":
     # Calculate trading metrics
     trading_metrics = calculate_trading_metrics(df)
     print(trading_metrics)
+
+    # Test caching functions
+    save_analysis_to_cache(df, 'BTC/USDT', 'kraken', '1h')
+    cached_df = load_analysis_from_cache('BTC/USDT', 'kraken', '1h')
+    print(f"Cached DataFrame loaded: {cached_df is not None}")

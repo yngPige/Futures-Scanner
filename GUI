@@ -1,0 +1,22 @@
+import PySimpleGUI as sg
+
+# Define the layout
+layout = [
+    [sg.Text('Futures Scanner Application')],
+    [sg.Input(key='-INPUT-')],
+    [sg.Button('Submit'), sg.Button('Cancel')]
+]
+
+# Create the window
+window = sg.Window('Futures Scanner', layout)
+
+# Event loop
+while True:
+    event, values = window.read()
+    if event == sg.WIN_CLOSED or event == 'Cancel':
+        break
+    if event == 'Submit':
+        print('Input:', values['-INPUT-'])
+
+# Close the window
+window.close()
