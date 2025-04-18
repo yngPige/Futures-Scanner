@@ -411,6 +411,10 @@ class TerminalUI:
             ("Limit", self.settings['limit']),
             ("Exchange", self.settings['exchange']),
             ("Model Type", self.settings['model_type']),
+<<<<<<< HEAD
+=======
+            ("Model Path", self.settings['model_path'] or "None"),
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
             ("Save", self.settings['save']),
             ("Tune", self.settings['tune']),
             ("Use GPU", self.settings['use_gpu'])
@@ -465,9 +469,13 @@ class TerminalUI:
             ("3", "Train Model"),
             ("4", "Make Predictions"),
             ("5", "Backtest Strategy"),
+<<<<<<< HEAD
             ("p", "Previous Analyses"),
             ("s", "Change Symbol"),
             ("l", "Change Data Limit"),
+=======
+            ("s", "Change Symbol"),
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
             ("6", "Settings"),
             ("c", "Clear Data"),
             ("h", "How to Use"),
@@ -488,12 +496,17 @@ class TerminalUI:
             self.make_predictions()
         elif choice == '5':
             self.backtest_strategy()
+<<<<<<< HEAD
         elif choice.lower() == 'p':
             self.show_previous_analyses()
         elif choice.lower() == 's':
             self.change_symbol()
         elif choice.lower() == 'l':
             self.change_limit()
+=======
+        elif choice.lower() == 's':
+            self.change_symbol()
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
         elif choice == '6':
             self.current_menu = self.settings_menu
         elif choice.lower() == 'c':
@@ -1031,6 +1044,7 @@ class TerminalUI:
                 ]
                 self.show_loading_animation("Calculating technical indicators", duration=3, log_messages=analysis_logs, compact_completion=True)
 
+<<<<<<< HEAD
                 # Check if we have cached analysis results
                 cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
 
@@ -1055,6 +1069,12 @@ class TerminalUI:
                         # Add a log entry about caching the data
                         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
                         self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
+=======
+                # Analyze the data using the technical analyzer directly
+                from src.analysis.technical_analysis import TechnicalAnalyzer
+                analyzer = TechnicalAnalyzer()
+                df_analyzed = analyzer.analyze(df)
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
 
                 # Add more detailed logs about the analysis results
                 if df_analyzed is not None and not df_analyzed.empty:
@@ -1245,6 +1265,7 @@ class TerminalUI:
                 ]
                 self.show_loading_animation("Analyzing market data", duration=2.5, log_messages=analysis_logs, compact_completion=True)
 
+<<<<<<< HEAD
                 # Check if we have cached analysis results
                 cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
 
@@ -1269,6 +1290,12 @@ class TerminalUI:
                         # Add a log entry about caching the data
                         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
                         self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
+=======
+                # Analyze the data using the technical analyzer directly
+                from src.analysis.technical_analysis import TechnicalAnalyzer
+                analyzer = TechnicalAnalyzer()
+                df_analyzed = analyzer.analyze(df)
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
 
                 if df_analyzed is not None and not df_analyzed.empty:
                     # Train model with enhanced loading animation
@@ -1383,6 +1410,7 @@ class TerminalUI:
                 # Show loading animation while analyzing data
                 self.show_loading_animation("Calculating technical indicators", duration=2.5, compact_completion=True)
 
+<<<<<<< HEAD
                 # Check if we have cached analysis results
                 cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
 
@@ -1407,6 +1435,12 @@ class TerminalUI:
                         # Add a log entry about caching the data
                         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
                         self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
+=======
+                # Analyze the data using the technical analyzer directly
+                from src.analysis.technical_analysis import TechnicalAnalyzer
+                analyzer = TechnicalAnalyzer()
+                df_analyzed = analyzer.analyze(df)
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
 
                 if df_analyzed is not None and not df_analyzed.empty:
                     self.print_info("Making predictions...")
@@ -1502,6 +1536,7 @@ class TerminalUI:
                 # Show loading animation while analyzing data
                 self.show_loading_animation("Calculating technical indicators", duration=2.5, compact_completion=True)
 
+<<<<<<< HEAD
                 # Check if we have cached analysis results
                 cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
 
@@ -1526,6 +1561,12 @@ class TerminalUI:
                         # Add a log entry about caching the data
                         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
                         self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
+=======
+                # Analyze the data using the technical analyzer directly
+                from src.analysis.technical_analysis import TechnicalAnalyzer
+                analyzer = TechnicalAnalyzer()
+                df_analyzed = analyzer.analyze(df)
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
 
                 if df_analyzed is not None and not df_analyzed.empty:
                     self.print_info("Making predictions...")
@@ -1669,6 +1710,7 @@ class TerminalUI:
             ]
             self.show_loading_animation("Calculating technical indicators", duration=3, log_messages=analysis_logs, compact_completion=True)
 
+<<<<<<< HEAD
             # Check if we have cached analysis results
             cached_analysis = load_analysis_from_cache(args.symbol, args.exchange, args.timeframe)
 
@@ -1693,6 +1735,12 @@ class TerminalUI:
                     # Add a log entry about caching the data
                     timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
                     self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
+=======
+            # Analyze the data using the technical analyzer directly
+            from src.analysis.technical_analysis import TechnicalAnalyzer
+            analyzer = TechnicalAnalyzer()
+            df_analyzed = analyzer.analyze(df)
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
 
             # Add more detailed logs about the analysis results
             if df_analyzed is not None and not df_analyzed.empty:
@@ -2366,6 +2414,7 @@ class TerminalUI:
             cols (int): Number of columns (width)
             lines (int): Number of lines (height)
         """
+<<<<<<< HEAD
         try:
             # On Windows, use mode command to set terminal size
             if os.name == 'nt':
@@ -2697,6 +2746,17 @@ class TerminalUI:
         self.save_current_settings()
 
         # Set terminal size
+=======
+        if os.name == 'nt':  # Windows
+            os.system(f'mode con: cols={cols} lines={lines}')
+        else:  # Unix-like systems
+            # Try to use stty to set terminal size
+            os.system(f'stty cols {cols} rows {lines} 2>/dev/null || true')
+
+    def show_exit_screen(self):
+        """Show the exit screen with donation information."""
+        # Set terminal size to ensure QR code fits properly
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
         self.set_terminal_size(80, 30)
 
         self.clear_screen()
@@ -2706,9 +2766,52 @@ class TerminalUI:
         print(Fore.CYAN + f"{title:^{width}}" + Style.RESET_ALL)
         print(Fore.CYAN + "=" * width + Style.RESET_ALL)
         print()
+<<<<<<< HEAD
 
         # Simple goodbye message
         print(f"{Fore.GREEN}Goodbye!{Style.RESET_ALL}")
+=======
+        print(f"{Fore.YELLOW}Please consider donating to support the development of this tool:{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}I'll probably just buy a vape or something{Style.RESET_ALL}")
+        print()
+
+        # QR Code ASCII Art - Simple version using standard ASCII characters
+        qr_code = [
+            "+-------------------+",
+            "|                   |",
+            "|   XXXXXXX   XXX   |",
+            "|   X     X   X X   |",
+            "|   X  X  X   X X   |",
+            "|   X  X  X   X X   |",
+            "|   X  X  X   X X   |",
+            "|   X     X         |",
+            "|   XXXXXXX X X X   |",
+            "|           XX      |",
+            "|   XXXXX X X X X   |",
+            "|   X     X X X X   |",
+            "|   X XXXXX X X X   |",
+            "|   X     X X   X   |",
+            "|   XXXXX X XXXXX   |",
+            "|                   |",
+            "+-------------------+"
+        ]
+
+        # Center the QR code in the terminal
+        terminal_width = 80  # Standard terminal width
+
+        # Print QR code title centered
+        title = "Scan this QR code to donate:"
+        print(f"{Fore.YELLOW}{title.center(terminal_width)}{Style.RESET_ALL}")
+
+        # Calculate padding for centering the QR code
+        qr_width = len(qr_code[0])
+        padding = (terminal_width - qr_width) // 2
+
+        # Print QR code with bright cyan color for better visibility
+        for line in qr_code:
+            print(f"{' ' * padding}{Fore.CYAN}{line}{Style.RESET_ALL}")
+
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
         print()
 
         # Display a countdown for 5 seconds
@@ -2731,6 +2834,7 @@ def display_splash_screen():
     """Display a cool ASCII splash screen."""
     # Set the window size to match the screenshot dimensions
     # Use os.system directly since this is outside the class
+<<<<<<< HEAD
     try:
         # On Windows, use mode command to set terminal size
         if os.name == 'nt':
@@ -2738,6 +2842,13 @@ def display_splash_screen():
         # Unix systems would use stty, but we're focusing on Windows for now
     except Exception as e:
         logger.error(f"Error setting terminal size: {e}")
+=======
+    if os.name == 'nt':  # Windows
+        os.system('mode con: cols=100 lines=30')
+    else:  # Unix-like systems
+        # Try to use stty to set terminal size
+        os.system('stty cols 100 rows 30 2>/dev/null || true')
+>>>>>>> e48ad05bc50668de469797f31f8704fc4b7f9bc3
 
     # Clear the screen first
     os.system('cls' if os.name == 'nt' else 'clear')
