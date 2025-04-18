@@ -2370,7 +2370,10 @@ class TerminalUI:
             # On Windows, use mode command to set terminal size
             if os.name == 'nt':
                 os.system(f'mode con: cols={cols} lines={lines}')
-            # Unix systems would use stty, but we're focusing on Windows for now
+            # Unix systems would use stty
+            else:  # Unix-like systems
+                # Try to use stty to set terminal size
+                os.system(f'stty cols {cols} rows {lines} 2>/dev/null || true')
         except Exception as e:
             logger.error(f"Error setting terminal size: {e}")
 
@@ -2735,7 +2738,10 @@ def display_splash_screen():
         # On Windows, use mode command to set terminal size
         if os.name == 'nt':
             os.system('mode con: cols=100 lines=30')
-        # Unix systems would use stty, but we're focusing on Windows for now
+        # Unix systems would use stty
+        else:  # Unix-like systems
+            # Try to use stty to set terminal size
+            os.system('stty cols 100 rows 30 2>/dev/null || true')
     except Exception as e:
         logger.error(f"Error setting terminal size: {e}")
 
