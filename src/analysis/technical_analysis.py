@@ -228,12 +228,20 @@ class TechnicalAnalyzer:
         Returns:
             pd.DataFrame: DataFrame with all indicators
         """
+        # Check if we have enough data to calculate indicators
+        if df is None or df.empty:
+            logger.error("Empty DataFrame provided, cannot add indicators")
+            return pd.DataFrame()
+
+        # Log the initial data shape
+        logger.info(f"Initial data shape before adding indicators: {df.shape}")
+
         # First add basic indicators which standardizes column names
         df_with_basic = self.add_basic_indicators(df)
 
         if df_with_basic.empty:
-            logger.warning("Basic indicators resulted in empty DataFrame")
-            return df
+            logger.error("Basic indicators resulted in empty DataFrame")
+            return pd.DataFrame()
 
         # Then add advanced and custom indicators
         df_with_advanced = self.add_advanced_indicators(df_with_basic)
@@ -241,18 +249,55 @@ class TechnicalAnalyzer:
 
         # Check if we have any data left after adding indicators
         if df_with_all.empty:
-            logger.warning("All indicators resulted in empty DataFrame")
-            return df
+            logger.error("All indicators resulted in empty DataFrame")
+            return pd.DataFrame()
 
-        # Drop NaN values, but only if it doesn't make the DataFrame empty
+        # Log NaN counts before handling them
+        nan_counts = df_with_all.isna().sum()
+        logger.info(f"NaN counts before handling: {nan_counts.sum()} total NaNs")
+        if nan_counts.sum() > 0:
+            logger.info(f"Columns with most NaNs: {nan_counts.nlargest(5).to_dict()}")
+
+        # Handle NaN values more intelligently
+        # First, drop rows at the beginning that have NaNs due to indicator calculation windows
+        # These are usually the first 20-30 rows depending on the longest indicator lookback period
+        min_periods = 30  # Conservative estimate for longest indicator lookback
+        if len(df_with_all) > min_periods * 2:  # Only if we have enough data
+            df_with_all = df_with_all.iloc[min_periods:].copy()
+            logger.info(f"Dropped first {min_periods} rows with potential NaNs from indicators")
+
+        # Now try dropping remaining NaN values
         df_no_na = df_with_all.dropna()
-        if not df_no_na.empty:
+        if not df_no_na.empty and len(df_no_na) >= 50:  # Ensure we have at least 50 rows of data
             df_with_all = df_no_na
+            logger.info(f"Successfully dropped NaN values, remaining shape: {df_with_all.shape}")
         else:
-            logger.warning("Dropping NaN values would result in empty DataFrame, keeping NaNs")
-            # Fill NaN values with 0 for numeric columns to avoid issues
-            numeric_cols = df_with_all.select_dtypes(include=['number']).columns
-            df_with_all[numeric_cols] = df_with_all[numeric_cols].fillna(0)
+            logger.warning("Dropping NaN values would result in too little data, filling NaNs instead")
+            # Fill NaN values with appropriate methods for different types of indicators
+
+            # For moving averages and other trend indicators, forward fill then backward fill
+            trend_cols = [col for col in df_with_all.columns if any(x in col.lower() for x in ['sma', 'ema', 'tema', 'wma', 'vwap', 'ichimoku', 'supertrend'])]
+            if trend_cols:
+                df_with_all[trend_cols] = df_with_all[trend_cols].fillna(method='ffill').fillna(method='bfill')
+
+            # For oscillators, fill with neutral values
+            osc_cols = [col for col in df_with_all.columns if any(x in col.lower() for x in ['rsi', 'stoch', 'cci', 'mfi', 'macd', 'ppo'])]
+            if osc_cols:
+                # Fill RSI with 50 (neutral)
+                rsi_cols = [col for col in osc_cols if 'rsi' in col.lower()]
+                if rsi_cols:
+                    df_with_all[rsi_cols] = df_with_all[rsi_cols].fillna(50)
+
+                # Fill other oscillators with 0 (neutral)
+                other_osc = [col for col in osc_cols if col not in rsi_cols]
+                if other_osc:
+                    df_with_all[other_osc] = df_with_all[other_osc].fillna(0)
+
+            # For remaining numeric columns, use 0
+            remaining_numeric = df_with_all.select_dtypes(include=['number']).columns.difference(trend_cols + osc_cols)
+            df_with_all[remaining_numeric] = df_with_all[remaining_numeric].fillna(0)
+
+            logger.info(f"Filled NaN values, data shape: {df_with_all.shape}")
 
         return df_with_all
 
@@ -332,25 +377,52 @@ class TechnicalAnalyzer:
         Returns:
             pd.DataFrame: DataFrame with all indicators and signals
         """
+        if df is None:
+            logger.error("None DataFrame provided, cannot analyze")
+            return pd.DataFrame()
+
         if df.empty:
-            logger.warning("Empty DataFrame provided, cannot analyze")
-            return df
+            logger.error("Empty DataFrame provided, cannot analyze")
+            return pd.DataFrame()
+
+        # Check if we have enough data for meaningful analysis
+        if len(df) < 50:  # Minimum data points needed for reliable indicators
+            logger.error(f"Not enough data points for analysis. Got {len(df)}, need at least 50.")
+            return pd.DataFrame()
+
+        # Log data information
+        logger.info(f"Analyzing data with {len(df)} rows from {df.index.min()} to {df.index.max()}")
 
         try:
             # Add all indicators
             df_with_indicators = self.add_all_indicators(df)
 
+            # Check if we got a valid result
+            if df_with_indicators.empty:
+                logger.error("Failed to add indicators, resulting DataFrame is empty")
+                return pd.DataFrame()
+
+            # Log how many indicators were added
+            indicator_count = len(df_with_indicators.columns) - len(df.columns)
+            logger.info(f"Added {indicator_count} technical indicators to the data")
+
             # Generate signals
             df_with_signals = self.generate_signals(df_with_indicators)
 
-            logger.info("Successfully analyzed data")
+            # Final check on data quality
+            if df_with_signals.empty:
+                logger.error("Failed to generate signals, resulting DataFrame is empty")
+                return pd.DataFrame()
+
+            # Log final data shape
+            logger.info(f"Successfully analyzed data. Final shape: {df_with_signals.shape}")
             return df_with_signals
 
         except Exception as e:
             logger.error(f"Error analyzing data: {e}")
             import traceback
-            traceback.print_exc()
-            return df
+            logger.error(traceback.format_exc())
+            return pd.DataFrame()
 
 
 # Example usage

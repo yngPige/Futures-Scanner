@@ -66,9 +66,22 @@ class PredictionModel:
         Returns:
             tuple: X (features), y (target)
         """
-        if df.empty:
-            logger.warning("Empty DataFrame provided, cannot prepare features")
+        if df is None:
+            logger.error("None DataFrame provided, cannot prepare features")
             return None, None
+
+        if df.empty:
+            logger.error("Empty DataFrame provided, cannot prepare features")
+            return None, None
+
+        # Check if we have enough data points for prediction
+        if len(df) <= n_forward:
+            logger.error(f"Not enough data points for {n_forward}-period forward prediction. Got {len(df)} rows.")
+            return None, None
+
+        # Log the shape of the DataFrame for debugging
+        logger.info(f"Initial DataFrame shape: {df.shape}")
+        logger.info(f"DataFrame columns: {df.columns.tolist()}")
 
         try:
             # Create target variable (future return)
@@ -78,24 +91,46 @@ class PredictionModel:
             df['target'] = np.where(df[target_column] > 0, 1, 0)
 
             # Drop NaN values
-            df = df.dropna()
+            df_clean = df.dropna()
+
+            # Check if we still have data after dropping NaN values
+            if df_clean.empty:
+                logger.error("All rows contain NaN values after creating target variable")
+                # Count NaN values in each column for debugging
+                nan_counts = df.isna().sum()
+                logger.info(f"NaN counts in columns: {nan_counts.to_dict()}")
+                return None, None
 
             # Select feature columns (exclude price and volume columns, and target)
             exclude_cols = ['open', 'high', 'low', 'close', 'volume', 'target', target_column]
-            exclude_cols.extend([col for col in df.columns if 'signal' in col.lower()])
+            exclude_cols.extend([col for col in df_clean.columns if 'signal' in col.lower()])
 
             # Also exclude any columns that are all NaN
-            exclude_cols.extend(df.columns[df.isna().all()].tolist())
+            exclude_cols.extend(df_clean.columns[df_clean.isna().all()].tolist())
 
             # Get feature columns
-            feature_cols = [col for col in df.columns if col not in exclude_cols and not df[col].isna().any()]
+            feature_cols = [col for col in df_clean.columns if col not in exclude_cols and not df_clean[col].isna().any()]
+
+            # Check if we have any feature columns
+            if not feature_cols:
+                logger.error("No valid feature columns found after filtering")
+                # Log excluded columns for debugging
+                logger.info(f"Excluded columns: {exclude_cols}")
+                logger.info(f"Remaining columns with NaN: {[col for col in df_clean.columns if col not in exclude_cols and df_clean[col].isna().any()]}")
+                return None, None
 
             # Store feature columns for later use
             self.feature_columns = feature_cols
 
             # Extract features and target
-            X = df[feature_cols]
-            y = df['target']
+            X = df_clean[feature_cols]
+            y = df_clean['target']
+
+            # Final check to ensure we have data
+            if len(X) == 0 or len(y) == 0:
+                logger.error("No samples available after processing")
+                logger.info(f"X shape: {X.shape}, y shape: {len(y)}")
+                return None, None
 
             logger.info(f"Prepared features with {len(feature_cols)} columns and {len(X)} samples")
             return X, y
@@ -119,6 +154,12 @@ class PredictionModel:
         """
         if X is None or y is None:
             logger.warning("Features or target is None, cannot train model")
+            return False
+
+        # Check if we have enough samples for train_test_split
+        min_samples = 10  # Minimum number of samples required
+        if len(X) < min_samples:
+            logger.error(f"Not enough samples to train model. Got {len(X)}, need at least {min_samples}")
             return False
 
         try:

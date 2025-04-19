@@ -1527,6 +1527,30 @@ class TerminalUI:
                         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
                         self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
 
+
+                if cached_analysis is not None:
+                    # Use cached analysis
+                    df_analyzed = cached_analysis
+                    self.print_info(f"Using cached analysis for {args.symbol} on {args.exchange} ({args.timeframe})")
+
+                    # Add a log entry about using cached data
+                    timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                    self.collected_logs.append((timestamp, f"✓ Using cached analysis data"))
+                else:
+                    # Analyze the data using the technical analyzer directly
+                    from src.analysis.technical_analysis import TechnicalAnalyzer
+                    analyzer = TechnicalAnalyzer()
+                    df_analyzed = analyzer.analyze(df)
+
+                    # Cache the analysis results for future use
+                    if df_analyzed is not None and not df_analyzed.empty:
+                        save_analysis_to_cache(df_analyzed, args.symbol, args.exchange, args.timeframe)
+
+                        # Add a log entry about caching the data
+                        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                        self.collected_logs.append((timestamp, f"✓ Saved analysis to cache for faster future access"))
+
+
                 if df_analyzed is not None and not df_analyzed.empty:
                     self.print_info("Making predictions...")
 
